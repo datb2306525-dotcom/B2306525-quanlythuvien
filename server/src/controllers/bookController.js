@@ -1,3 +1,5 @@
+const genresOf = (value) =>
+  Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
 import { Sach, NhaXuatBan, TheoDoiMuonSach } from '../models/index.js';
 import { normalize } from '../services/search.js';
 import { searchCatalog } from '../services/ai.js';
@@ -11,7 +13,7 @@ export async function list(req, res) {
           normalize(`${b.TenSach} ${b.NguonGocTacGia} ${b.TheLoai} ${b.DanhMuc || ''}`).includes(
             q,
           )) &&
-        (!req.query.category || b.TheLoai === req.query.category) &&
+        (!req.query.category || genresOf(b.TheLoai).includes(req.query.category)) &&
         (!req.query.catalog || b.DanhMuc === req.query.catalog) &&
         (!req.query.publisher || String(b.MaNXB?._id) === req.query.publisher),
     ),
@@ -40,6 +42,16 @@ export async function save(req, res) {
   const data = Object.fromEntries(
     fields.filter((k) => req.body[k] !== undefined).map((k) => [k, req.body[k]]),
   );
+  if (data.TheLoai !== undefined) {
+    const values = typeof data.TheLoai === 'string' ? [data.TheLoai] : data.TheLoai;
+    if (
+      !Array.isArray(values) ||
+      !values.length ||
+      values.some((v) => typeof v !== 'string' || !v.trim() || v.trim().length > 100)
+    )
+      return res.status(400).json({ message: 'Chọn ít nhất một thể loại hợp lệ cho sách.' });
+    data.TheLoai = [...new Set(values.map((v) => v.trim()))];
+  }
   if (data.AnhBia) {
     const match =
       typeof data.AnhBia === 'string' &&
@@ -87,7 +99,7 @@ export async function ask(req, res) {
     .map((book) => ({
       bookId: book._id,
       book,
-      reason: `Chủ đề: ${book.TheLoai}. ${book.MoTa}`,
+      reason: `Chủ đề: ${genresOf(book.TheLoai).join(' · ')}. ${book.MoTa}`,
       available: book.SoQuyen > 0,
     }));
   res.json({
@@ -103,7 +115,7 @@ export async function recommendations(req, res) {
     MaDocGia: req.user.id,
     TrangThai: { $in: ['DangMuon', 'DaTra'] },
   }).populate('MaSach');
-  const categories = new Set(history.map((h) => h.MaSach?.TheLoai));
+  const categories = new Set(history.flatMap((h) => genresOf(h.MaSach?.TheLoai)));
   const seen = new Set(history.map((h) => String(h.MaSach?._id)));
   const books = await Sach.find().populate('MaNXB').lean();
   res.json({
@@ -112,8 +124,8 @@ export async function recommendations(req, res) {
       .filter((b) => !seen.has(String(b._id)))
       .sort(
         (a, b) =>
-          Number(categories.has(b.TheLoai)) - Number(categories.has(a.TheLoai)) ||
-          b.LuotMuon - a.LuotMuon,
+          Number(genresOf(b.TheLoai).some((g) => categories.has(g))) -
+            Number(genresOf(a.TheLoai).some((g) => categories.has(g))) || b.LuotMuon - a.LuotMuon,
       )
       .slice(0, 5),
   });

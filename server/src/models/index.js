@@ -15,7 +15,14 @@ const book = new Schema(
     NamXuatBan: { type: Number, required: true },
     MaNXB: { type: Schema.Types.ObjectId, ref: 'NhaXuatBan', required: true },
     NguonGocTacGia: str,
-    TheLoai: str,
+    TheLoai: {
+      type: [{ type: String, trim: true, minlength: 1, maxlength: 100 }],
+      required: true,
+      validate: {
+        validator: (values) => values.length > 0 && new Set(values).size === values.length,
+        message: 'Chọn ít nhất một thể loại, không để trùng.',
+      },
+    },
     DanhMuc: { type: String, trim: true, default: 'Sách tham khảo' },
     AnhBia: { type: String, default: '' },
     MoTa: { type: String, default: '' },

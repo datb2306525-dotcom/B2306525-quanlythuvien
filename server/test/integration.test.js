@@ -69,6 +69,10 @@ test(
         NamXuatBan: 2025,
         MaNXB: publisher._id,
       });
+      // Previous single-genre records are migrated without losing book data.
+      await Sach.collection.updateOne({ _id: book._id }, { $set: { TheLoai: 'Công nghệ' } });
+      await (await import('../src/initializeModels.js')).initializeModels();
+      assert.deepEqual((await Sach.collection.findOne({ _id: book._id })).TheLoai, ['Công nghệ']);
       const signup = (i) =>
         request('/auth/register', 'POST', {
           HoLot: 'Test',
@@ -486,11 +490,31 @@ test(
       const saved = await request(
         '/books/' + normalBook.id,
         'PUT',
-        { AnhBia: image, DanhMuc: 'Giáo trình', TheLoai: 'Công nghệ' },
+        { AnhBia: image, DanhMuc: 'Giáo trình', TheLoai: ['Công nghệ', 'Khoa học'] },
         admin,
       );
       assert.equal(saved.status, 200);
       assert.equal(saved.data.AnhBia, image);
+      assert.deepEqual(saved.data.TheLoai, ['Công nghệ', 'Khoa học']);
+      for (const genre of ['Công nghệ', 'Khoa học']) {
+        const results = await request('/books?category=' + encodeURIComponent(genre));
+        assert.ok(results.data.some((b) => b._id === normalBook.id));
+      }
+      assert.ok(
+        !(await request('/books?category=' + encodeURIComponent('Lịch sử'))).data.some(
+          (b) => b._id === normalBook.id,
+        ),
+      );
+      assert.ok((await request('/books?q=khoa%20hoc')).data.some((b) => b._id === normalBook.id));
+      for (const invalid of [[], [' '], [123], null]) {
+        assert.equal(
+          (await request('/books/' + normalBook.id, 'PUT', { TheLoai: invalid }, admin)).status,
+          400,
+        );
+      }
+      const summary = (await request('/admin/stats', 'GET', undefined, admin)).data;
+      assert.equal(summary.available, 1); // Multiple genre memberships must not double total stock.
+      assert.ok(summary.inventory.some((row) => row._id === 'Khoa học' && row.titles === 1));
       assert.equal(
         (
           await request(

@@ -131,12 +131,13 @@ export async function action(req, res) {
   res.json(result);
 }
 export async function overview(req, res) {
-  const [books, readers, loans, staff, inventory, pendingReports] = await Promise.all([
+  const [books, readers, loans, staff, inventory, pendingReports, stock] = await Promise.all([
     Sach.countDocuments(),
     DocGia.countDocuments(),
     TheoDoiMuonSach.find().lean(),
     NhanVien.countDocuments(),
     Sach.aggregate([
+      { $unwind: '$TheLoai' },
       {
         $group: {
           _id: '$TheLoai',
@@ -148,13 +149,14 @@ export async function overview(req, res) {
       { $sort: { _id: 1 } },
     ]),
     BaoCaoSach.countDocuments({ TrangThai: { $ne: 'DaXuLy' } }),
+    Sach.aggregate([{ $group: { _id: null, available: { $sum: '$SoQuyen' } } }]),
   ]);
   res.json({
     books,
     readers,
     staff,
     inventory,
-    available: inventory.reduce((sum, row) => sum + row.available, 0),
+    available: stock[0]?.available || 0,
     pendingReports,
     pending: loans.filter((l) => l.TrangThai === 'ChoDuyet').length,
     awaitingPickup: loans.filter((l) => l.TrangThai === 'ChoNhan').length,

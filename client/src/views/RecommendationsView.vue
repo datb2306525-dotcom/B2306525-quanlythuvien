@@ -1,7 +1,16 @@
 <script setup>
 import { useLibraryContext } from '../composables/useLibrary';
-const { page, user, category, recommendations, personalized, isStaff, openAuth, detail } =
-  useLibraryContext();
+const {
+  genreLabel,
+  page,
+  user,
+  category,
+  recommendations,
+  personalized,
+  isStaff,
+  openAuth,
+  detail,
+} = useLibraryContext();
 </script>
 
 <template>
@@ -53,7 +62,7 @@ const { page, user, category, recommendations, personalized, isStaff, openAuth, 
           class="bi bi-book"
           :style="{ color: b.MauBia }"
         ></i
-        ><span class="book-category">{{ b.TheLoai }}</span>
+        ><span class="book-category">{{ genreLabel(b.TheLoai) }}</span>
         <h3>{{ b.TenSach }}</h3>
         <p>{{ b.NguonGocTacGia }}</p>
         <small>{{ b.SoQuyen }} bản có sẵn · Xem chi tiết →</small>

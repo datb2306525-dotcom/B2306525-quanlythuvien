@@ -1,4 +1,5 @@
 import { ref, computed, onMounted, onUnmounted, watch, inject } from 'vue';
+import { defaultGenres, genresOf, genreLabel } from '../genres';
 import { api } from '../api';
 
 export const libraryKey = Symbol('library');
@@ -59,16 +60,7 @@ export function useLibrary() {
   const pickupCode = ref('');
   const lockForm = ref({ locked: true, reason: '' });
   const genreOptions = computed(() => [
-    ...new Set([
-      'Công nghệ',
-      'Văn học',
-      'Kinh tế',
-      'Khoa học',
-      'Lịch sử',
-      'Tâm lý',
-      'Kỹ năng sống',
-      ...books.value.map((b) => b.TheLoai),
-    ]),
+    ...new Set([...defaultGenres, ...books.value.flatMap((b) => genresOf(b.TheLoai))]),
   ]);
   const catalogOptions = computed(() => [
     ...new Set([
@@ -133,7 +125,7 @@ export function useLibrary() {
       busy.value = false;
     }
   }
-  const categories = computed(() => ['Tất cả', ...new Set(books.value.map((b) => b.TheLoai))]);
+  const categories = computed(() => ['Tất cả', ...genreOptions.value]);
   const norm = (s) =>
     String(s || '')
       .normalize('NFD')
@@ -143,8 +135,10 @@ export function useLibrary() {
   const filtered = computed(() =>
     books.value.filter(
       (b) =>
-        (category.value === 'Tất cả' || b.TheLoai === category.value) &&
-        norm(b.TenSach + ' ' + b.NguonGocTacGia + ' ' + b.TheLoai).includes(norm(query.value)),
+        (category.value === 'Tất cả' || genresOf(b.TheLoai).includes(category.value)) &&
+        norm(b.TenSach + ' ' + b.NguonGocTacGia + ' ' + genreLabel(b.TheLoai)).includes(
+          norm(query.value),
+        ),
     ),
   );
   const isStaff = computed(() => user.value && ['Admin', 'Librarian'].includes(user.value.role));
@@ -302,12 +296,17 @@ export function useLibrary() {
   }
   function editBook(b) {
     bookForm.value = b
-      ? { ...b, DanhMuc: b.DanhMuc || 'Sách tham khảo', MaNXB: b.MaNXB?._id }
+      ? {
+          ...b,
+          TheLoai: [...genresOf(b.TheLoai)],
+          DanhMuc: b.DanhMuc || 'Sách tham khảo',
+          MaNXB: b.MaNXB?._id,
+        }
       : {
           MaSach: '',
           TenSach: '',
           NguonGocTacGia: '',
-          TheLoai: 'Công nghệ',
+          TheLoai: [],
           DanhMuc: 'Sách tham khảo',
           AnhBia: '',
           DonGia: 0,
@@ -321,6 +320,10 @@ export function useLibrary() {
     error.value = '';
   }
   async function saveBook() {
+    if (!bookForm.value.TheLoai?.length) {
+      error.value = 'Chọn ít nhất một thể loại cho sách.';
+      return;
+    }
     busy.value = true;
     try {
       await api('/books' + (bookForm.value._id ? '/' + bookForm.value._id : ''), {
@@ -429,6 +432,7 @@ export function useLibrary() {
     lockForm,
     saveReaderLock,
     genreOptions,
+    genreLabel,
     catalogOptions,
     uploadCover,
     adminPortal,

@@ -3,6 +3,7 @@ import { useLibraryContext } from '../composables/useLibrary';
 const {
   page,
   books,
+  genreLabel,
   category,
   query,
   loading,
@@ -198,7 +199,7 @@ const {
               ><span class="cover-action"
                 >Xem chi tiết <i class="bi bi-arrow-up-right"></i
               ></span></button
-            ><span class="book-category">{{ b.TheLoai }}</span
+            ><span class="book-category">{{ genreLabel(b.TheLoai) }}</span
             ><button
               class="book-title"
               @click="detail(b)"

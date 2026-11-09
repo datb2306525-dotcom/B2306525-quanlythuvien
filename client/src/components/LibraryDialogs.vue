@@ -9,6 +9,7 @@ const {
   lockForm,
   saveReaderLock,
   genreOptions,
+  genreLabel,
   catalogOptions,
   uploadCover,
   page,
@@ -177,7 +178,7 @@ const {
         </button></template
       >
       <template v-if="modal === 'detail'"
-        ><div class="eyebrow dark">{{ selected.TheLoai }} · {{ selected.MaSach }}</div>
+        ><div class="eyebrow dark">{{ genreLabel(selected.TheLoai) }} · {{ selected.MaSach }}</div>
         <h2>{{ selected.TenSach }}</h2>
         <img
           v-if="selected.AnhBia"
@@ -379,20 +380,29 @@ const {
                   {{ p.TenNXB }}
                 </option>
               </select></label
-            ><label class="col-6"
-              >Thể loại<select
-                v-model="bookForm.TheLoai"
-                class="form-select"
-                required
-              >
-                <option
+            >
+            <fieldset class="col-12">
+              <legend class="fs-6">Thể loại <span class="text-danger">*</span></legend>
+              <p class="muted small">
+                Chọn một hoặc nhiều thể loại. Sách sẽ xuất hiện trong từng bộ lọc tương ứng ở trang
+                độc giả.
+              </p>
+              <div class="d-flex flex-wrap gap-3">
+                <label
                   v-for="g in genreOptions"
                   :key="g"
+                  class="d-flex gap-2 align-items-center"
                 >
+                  <input
+                    v-model="bookForm.TheLoai"
+                    type="checkbox"
+                    :value="g"
+                  />
                   {{ g }}
-                </option>
-              </select></label
-            >
+                </label>
+              </div>
+              <small class="muted">Đã chọn {{ bookForm.TheLoai?.length || 0 }} thể loại</small>
+            </fieldset>
             <label class="col-6"
               >Danh mục<select
                 v-model="bookForm.DanhMuc"

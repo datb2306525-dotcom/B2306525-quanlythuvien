@@ -160,3 +160,5 @@ Duyệt phiếu giữ một bản sách và cấp mã duy nhất hiển thị tr
 Thêm/sửa sách hỗ trợ tải ảnh PNG/JPEG/WebP tối đa 1 MB, xem trước và xóa ảnh, chọn danh mục và thể loại. Ảnh lưu cùng sách trong MongoDB dạng data URL, hiển thị ở danh mục, chi tiết, đề xuất và bảng quản lý. Quản lý sách lọc kết hợp danh mục, thể loại, nhà xuất bản và từ khóa; quản lý phiếu tìm theo tên sách, tên độc giả, mã phiếu (không phân biệt dấu), kèm bộ lọc trạng thái.
 
 Mục **Độc giả** cho phép khóa/mở khóa với lý do vi phạm. API: PATCH /api/admin/readers/:id/lock với {locked: true, reason: '…'} hoặc {locked: false}. Tài khoản bị khóa không đăng nhập hoặc gọi API được, kể cả bằng token đã cấp; không được duyệt hoặc giao sách mới. Quản trị vẫn có thể nhận trả, thu phí và hủy phiếu của độc giả bị khóa.
+
+Thể loại sách hỗ trợ chọn nhiều mục bằng checkbox khi thêm/sửa. Các nút lọc nhanh và danh sách chọn của độc giả dùng chung danh sách với quản trị; sách được lọc theo từng thể loại thành viên. Dữ liệu thể loại cũ dạng chuỗi tự chuyển thành mảng khi khởi động/seed. Thống kê theo thể loại tính sách ở mỗi thể loại đã chọn, còn tổng tồn chỉ tính mỗi sách một lần.

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { genresOf } from '../genres';
 import LoansTable from '../components/LoansTable.vue';
 import ReportsPanel from '../components/ReportsPanel.vue';
 import { useLibraryContext } from '../composables/useLibrary';
@@ -7,6 +8,7 @@ const {
   page,
   user,
   books,
+  genreLabel,
   loans,
   stats,
   readers,
@@ -38,7 +40,7 @@ const norm = (v) =>
 const managedBooks = computed(() =>
   books.value.filter(
     (b) =>
-      (!bookGenre.value || b.TheLoai === bookGenre.value) &&
+      (!bookGenre.value || genresOf(b.TheLoai).includes(bookGenre.value)) &&
       (!bookCatalog.value || (b.DanhMuc || 'Sách tham khảo') === bookCatalog.value) &&
       (!bookPublisher.value || b.MaNXB?._id === bookPublisher.value) &&
       norm(b.MaSach + ' ' + b.TenSach + ' ' + b.NguonGocTacGia).includes(
@@ -311,7 +313,9 @@ const managedBooks = computed(() =>
                   <td>{{ b.NguonGocTacGia }}</td>
                   <td>
                     {{ b.DanhMuc || 'Sách tham khảo'
-                    }}<small class="d-block">{{ b.TheLoai }} · {{ b.MaNXB?.TenNXB }}</small>
+                    }}<small class="d-block"
+                      >{{ genreLabel(b.TheLoai) }} · {{ b.MaNXB?.TenNXB }}</small
+                    >
                   </td>
                   <td>{{ b.SoQuyen }}</td>
                   <td>
