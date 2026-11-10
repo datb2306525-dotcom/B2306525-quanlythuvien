@@ -10,7 +10,9 @@ export function useLibrary() {
   const sessionKey = adminPortal ? 'athena-admin-' : 'athena-';
   const initialPage = location.pathname.split('/')[1];
   const page = ref(
-      ['admin', 'catalog', 'loans', 'recommendations'].includes(initialPage) ? initialPage : 'home',
+      ['admin', 'catalog', 'loans', 'recommendations', 'account'].includes(initialPage)
+        ? initialPage
+        : 'home',
     ),
     user = ref(null);
   const books = ref([]),
@@ -27,6 +29,9 @@ export function useLibrary() {
     personalized = ref(false),
     reports = ref([]),
     reportContent = ref('');
+  const profileForm = ref({}),
+    profileLoading = ref(false),
+    profileError = ref('');
   const oauthProviders = ref({ google: false, facebook: false });
   const modal = ref(''),
     selected = ref(null),
@@ -164,6 +169,7 @@ export function useLibrary() {
     history.pushState({}, '', p === 'admin' ? '/admin' : p === 'home' ? '/' : '/' + p);
     error.value = '';
     if (p === 'loans' || p === 'admin') loadAccount();
+    if (p === 'account') loadProfile();
     if (p === 'recommendations') loadRecommendations();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -173,10 +179,11 @@ export function useLibrary() {
       location.reload();
       return;
     }
-    page.value = ['admin', 'catalog', 'loans', 'recommendations'].includes(target)
+    page.value = ['admin', 'catalog', 'loans', 'recommendations', 'account'].includes(target)
       ? target
       : 'home';
     if (['loans', 'admin'].includes(page.value)) loadAccount();
+    if (page.value === 'account') loadProfile();
     if (page.value === 'recommendations') loadRecommendations();
   }
   window.addEventListener('popstate', onPopState);
@@ -237,6 +244,7 @@ export function useLibrary() {
       modal.value = '';
       notify('Đăng nhập thành công');
       await loadAccount();
+      if (page.value === 'account') await loadProfile();
     } catch (e) {
       error.value = e.message;
     } finally {
@@ -294,10 +302,50 @@ export function useLibrary() {
       busy.value = false;
     }
   }
+  function requestLogout() {
+    error.value = '';
+    modal.value = 'logout';
+  }
+  async function loadProfile() {
+    if (!user.value || isStaff.value) return;
+    profileLoading.value = true;
+    profileError.value = '';
+    try {
+      const profile = await api('/auth/profile');
+      profileForm.value = {
+        ...profile,
+        NgaySinh: profile.NgaySinh ? profile.NgaySinh.slice(0, 10) : '',
+      };
+    } catch (e) {
+      profileError.value = e.message;
+    } finally {
+      profileLoading.value = false;
+    }
+  }
+  async function saveProfile() {
+    busy.value = true;
+    profileError.value = '';
+    try {
+      const result = await api('/auth/profile', { method: 'PATCH', body: profileForm.value });
+      profileForm.value = {
+        ...result.profile,
+        NgaySinh: result.profile.NgaySinh?.slice(0, 10) || '',
+      };
+      user.value = result.user;
+      localStorage.setItem('athena-user', JSON.stringify(result.user));
+      notify('Đã cập nhật thông tin tài khoản.');
+    } catch (e) {
+      profileError.value = e.message;
+    } finally {
+      busy.value = false;
+    }
+  }
   function logout() {
     localStorage.removeItem(sessionKey + 'token');
     localStorage.removeItem(sessionKey + 'user');
     user.value = null;
+    profileForm.value = {};
+    profileError.value = '';
     loans.value = [];
     reports.value = [];
     stats.value = {};
@@ -479,6 +527,7 @@ export function useLibrary() {
     }
     await load();
     if (['admin', 'loans'].includes(page.value)) await loadAccount();
+    if (page.value === 'account') await loadProfile();
     if (page.value === 'recommendations') await loadRecommendations();
   });
   watch(user, () => {
@@ -486,6 +535,12 @@ export function useLibrary() {
   });
 
   return {
+    profileForm,
+    profileLoading,
+    profileError,
+    loadProfile,
+    saveProfile,
+    requestLogout,
     oauthProviders,
     socialLogin,
     today,

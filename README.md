@@ -164,3 +164,7 @@ Mục **Độc giả** cho phép khóa/mở khóa với lý do vi phạm. API: P
 Thể loại sách hỗ trợ chọn nhiều mục bằng checkbox khi thêm/sửa. Các nút lọc nhanh và danh sách chọn của độc giả dùng chung danh sách với quản trị; sách được lọc theo từng thể loại thành viên. Dữ liệu thể loại cũ dạng chuỗi tự chuyển thành mảng khi khởi động/seed. Thống kê theo thể loại tính sách ở mỗi thể loại đã chọn, còn tổng tồn chỉ tính mỗi sách một lần.
 
 Hướng dẫn cấu hình đăng nhập Google/Facebook cho độc giả: [docs/SOCIAL_LOGIN.md](docs/SOCIAL_LOGIN.md).
+
+## Hồ sơ độc giả và đăng xuất
+
+Nhấn tên độc giả trên thanh đầu trang để mở `/account`. Hồ sơ cho phép sửa họ tên, ngày sinh, phái, điện thoại, địa chỉ và loại độc giả; email và mã độc giả chỉ đọc. API `GET /api/auth/profile` và `PATCH /api/auth/profile` chỉ cho Reader xem/sửa hồ sơ của chính mình, không cho đổi vai trò, khóa tài khoản, email hay mật khẩu. Áp dụng cho cả tài khoản mật khẩu và Google. Sau khi lưu, tên hiển thị cập nhật ngay. Nút đăng xuất ở cả cổng độc giả và quản trị yêu cầu xác nhận; chọn Hủy hoặc đóng hộp thoại giữ nguyên phiên.

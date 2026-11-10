@@ -1,3 +1,4 @@
+import { genresOf } from '../../../shared/genres.js';
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 const str = { type: String, trim: true, required: true };
@@ -16,6 +17,7 @@ const book = new Schema(
     MaNXB: { type: Schema.Types.ObjectId, ref: 'NhaXuatBan', required: true },
     NguonGocTacGia: str,
     TheLoai: {
+      set: genresOf,
       type: [{ type: String, trim: true, minlength: 1, maxlength: 100 }],
       required: true,
       validate: {

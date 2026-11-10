@@ -73,6 +73,17 @@ test(
       await Sach.collection.updateOne({ _id: book._id }, { $set: { TheLoai: 'Công nghệ' } });
       await (await import('../src/initializeModels.js')).initializeModels();
       assert.deepEqual((await Sach.collection.findOne({ _id: book._id })).TheLoai, ['Công nghệ']);
+      for (const broken of ['["Công nghệ", "Khoa học"]', ['["Công nghệ", "Khoa học"]']]) {
+        await Sach.collection.updateOne({ _id: book._id }, { $set: { TheLoai: broken } });
+        await (await import('../src/initializeModels.js')).initializeModels();
+        assert.deepEqual((await Sach.collection.findOne({ _id: book._id })).TheLoai, [
+          'Công nghệ',
+          'Khoa học',
+        ]);
+        const science = await request('/books?category=' + encodeURIComponent('Khoa học'));
+        assert.ok(science.data.some((b) => b._id === book.id));
+      }
+      await Sach.updateOne({ _id: book._id }, { $set: { TheLoai: ['Công nghệ'] } });
       const signup = (i) =>
         request('/auth/register', 'POST', {
           HoLot: 'Test',
@@ -98,6 +109,48 @@ test(
         })
       ).data.token;
       assert.ok(admin);
+      assert.equal((await request('/auth/profile')).status, 401);
+      assert.equal((await request('/auth/profile', 'GET', undefined, admin)).status, 403);
+      const initialProfile = (await request('/auth/profile', 'GET', undefined, reader)).data;
+      assert.equal(initialProfile.Email, 'reader1@test.vn');
+      assert.equal(initialProfile.Password, undefined);
+      assert.equal(initialProfile.GoogleId, undefined);
+      const edited = await request(
+        '/auth/profile',
+        'PATCH',
+        {
+          HoLot: 'Nguyễn Văn',
+          Ten: 'Đạt',
+          DiaChi: 'Cần Thơ',
+          DienThoai: '0912345678',
+          Email: 'hijacked@test.vn',
+          BiKhoa: true,
+          role: 'Admin',
+          Password: 'ChangedPassword',
+          _id: b.data.user.id,
+        },
+        reader,
+      );
+      assert.equal(edited.status, 200);
+      assert.equal(edited.data.user.name, 'Nguyễn Văn Đạt');
+      assert.equal(edited.data.user.role, 'Reader');
+      assert.equal(edited.data.profile.Email, 'reader1@test.vn');
+      assert.equal(edited.data.profile.Password, undefined);
+      assert.equal(
+        (await request('/auth/me', 'GET', undefined, reader)).data.name,
+        'Nguyễn Văn Đạt',
+      );
+      assert.equal((await request('/auth/profile', 'GET', undefined, other)).data.DiaChi, 'Test');
+      for (const body of [
+        { Ten: ' ' },
+        { NgaySinh: '2999-01-01' },
+        { NgaySinh: '2024-02-31' },
+        { Phai: 'Invalid' },
+        { Email: 'ignored@test.vn' },
+      ]) {
+        assert.equal((await request('/auth/profile', 'PATCH', body, reader)).status, 400);
+      }
+      assert.equal((await request('/auth/profile', 'PATCH', { Ten: 'Staff' }, admin)).status, 403);
       assert.equal(
         (
           await request('/auth/login', 'POST', {
@@ -496,6 +549,16 @@ test(
       assert.equal(saved.status, 200);
       assert.equal(saved.data.AnhBia, image);
       assert.deepEqual(saved.data.TheLoai, ['Công nghệ', 'Khoa học']);
+      for (const serialized of ['["Công nghệ", "Khoa học"]', ['["Công nghệ", "Khoa học"]']]) {
+        const repaired = await request(
+          '/books/' + normalBook.id,
+          'PUT',
+          { TheLoai: serialized },
+          admin,
+        );
+        assert.equal(repaired.status, 200);
+        assert.deepEqual(repaired.data.TheLoai, ['Công nghệ', 'Khoa học']);
+      }
       for (const genre of ['Công nghệ', 'Khoa học']) {
         const results = await request('/books?category=' + encodeURIComponent(genre));
         assert.ok(results.data.some((b) => b._id === normalBook.id));

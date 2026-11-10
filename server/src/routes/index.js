@@ -37,6 +37,8 @@ router.patch('/loans/:id', auth(), wrap(loans.action));
 router.get('/admin/stats', staff, wrap(loans.overview));
 router.get('/admin/readers', staff, wrap(loans.readers));
 router.patch('/admin/readers/:id/lock', staff, wrap(accounts.lockReader));
+router.get('/auth/profile', auth(['Reader']), wrap(accounts.profile));
+router.patch('/auth/profile', auth(['Reader']), wrap(accounts.updateProfile));
 router.get('/auth/me', auth(), (req, res) =>
   res.json({
     id: req.user.id,

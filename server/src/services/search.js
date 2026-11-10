@@ -1,3 +1,4 @@
+import { genreLabel } from '../../../shared/genres.js';
 export const normalize = (s) =>
   String(s || '')
     .normalize('NFD')
@@ -25,7 +26,7 @@ export function rankBooks(books, query) {
   return books
     .map((book) => {
       const title = normalize(book.TenSach),
-        category = normalize(book.TheLoai),
+        category = normalize(genreLabel(book.TheLoai)),
         body = normalize(book.MoTa + ' ' + book.NguonGocTacGia);
       const score = terms.reduce(
         (n, t) =>

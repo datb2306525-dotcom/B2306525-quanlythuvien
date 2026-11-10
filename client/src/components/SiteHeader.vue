@@ -1,6 +1,7 @@
 <script setup>
 import { useLibraryContext } from '../composables/useLibrary';
-const { page, user, loans, recommendations, navigate, logout, openAuth } = useLibraryContext();
+const { page, user, loans, recommendations, navigate, requestLogout, openAuth } =
+  useLibraryContext();
 </script>
 
 <template>
@@ -55,11 +56,21 @@ const { page, user, loans, recommendations, navigate, logout, openAuth } = useLi
         ><button
           v-else
           class="profile"
-          @click="logout"
-          title="Đăng xuất"
+          @click="navigate('account')"
+          title="Thông tin tài khoản"
         >
           <span>{{ user.name.charAt(0) }}</span
-          >{{ user.name }} <i class="bi bi-box-arrow-right"></i>
+          >{{ user.name }} <i class="bi bi-person-gear"></i>
+        </button>
+        <button
+          v-if="user"
+          type="button"
+          class="icon-button"
+          @click="requestLogout"
+          aria-label="Đăng xuất"
+          title="Đăng xuất"
+        >
+          <i class="bi bi-box-arrow-right"></i>
         </button>
       </div>
     </div>

@@ -1,5 +1,4 @@
-const genresOf = (value) =>
-  Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+import { genresOf, genreLabel } from '../../../shared/genres.js';
 import { Sach, NhaXuatBan, TheoDoiMuonSach } from '../models/index.js';
 import { normalize } from '../services/search.js';
 import { searchCatalog } from '../services/ai.js';
@@ -10,9 +9,9 @@ export async function list(req, res) {
     books.filter(
       (b) =>
         (!q ||
-          normalize(`${b.TenSach} ${b.NguonGocTacGia} ${b.TheLoai} ${b.DanhMuc || ''}`).includes(
-            q,
-          )) &&
+          normalize(
+            `${b.TenSach} ${b.NguonGocTacGia} ${genreLabel(b.TheLoai)} ${b.DanhMuc || ''}`,
+          ).includes(q)) &&
         (!req.query.category || genresOf(b.TheLoai).includes(req.query.category)) &&
         (!req.query.catalog || b.DanhMuc === req.query.catalog) &&
         (!req.query.publisher || String(b.MaNXB?._id) === req.query.publisher),
@@ -43,14 +42,16 @@ export async function save(req, res) {
     fields.filter((k) => req.body[k] !== undefined).map((k) => [k, req.body[k]]),
   );
   if (data.TheLoai !== undefined) {
-    const values = typeof data.TheLoai === 'string' ? [data.TheLoai] : data.TheLoai;
+    const raw = typeof data.TheLoai === 'string' ? [data.TheLoai] : data.TheLoai;
+    const values = genresOf(data.TheLoai);
     if (
-      !Array.isArray(values) ||
+      !Array.isArray(raw) ||
+      raw.some((v) => typeof v !== 'string') ||
       !values.length ||
       values.some((v) => typeof v !== 'string' || !v.trim() || v.trim().length > 100)
     )
       return res.status(400).json({ message: 'Chọn ít nhất một thể loại hợp lệ cho sách.' });
-    data.TheLoai = [...new Set(values.map((v) => v.trim()))];
+    data.TheLoai = values;
   }
   if (data.AnhBia) {
     const match =

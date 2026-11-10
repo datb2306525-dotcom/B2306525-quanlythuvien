@@ -7,6 +7,7 @@ import ReportsPanel from './components/ReportsPanel.vue';
 import LoansTable from './components/LoansTable.vue';
 import AthenaChat from './components/AthenaChat.vue';
 import LibraryDialogs from './components/LibraryDialogs.vue';
+import AccountView from './views/AccountView.vue';
 import HomeView from './views/HomeView.vue';
 import AdminView from './views/AdminView.vue';
 import LoansView from './views/LoansView.vue';
@@ -14,7 +15,7 @@ import RecommendationsView from './views/RecommendationsView.vue';
 
 const library = useLibrary();
 provide(libraryKey, library);
-const { adminPortal, user, logout, page, error, modal, notice, load } = library;
+const { adminPortal, user, requestLogout, page, error, modal, notice, load } = library;
 </script>
 
 <template>
@@ -27,7 +28,7 @@ const { adminPortal, user, logout, page, error, modal, notice, load } = library;
       <button
         v-if="user"
         class="btn btn-outline-secondary"
-        @click="logout"
+        @click="requestLogout"
       >
         {{ user.name }} · Đăng xuất
       </button>
@@ -56,6 +57,7 @@ const { adminPortal, user, logout, page, error, modal, notice, load } = library;
   </div>
   <HomeView v-if="page === 'home' || page === 'catalog'" />
   <AdminView v-else-if="page === 'admin'" />
+  <AccountView v-else-if="page === 'account'" />
   <LoansView v-else-if="page === 'loans'" />
   <RecommendationsView v-else-if="page === 'recommendations'" />
   <LoansTable v-if="!adminPortal" />

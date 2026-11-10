@@ -145,6 +145,13 @@ test(
       const account = await created.json();
       assert.equal(account.user.role, 'Reader');
       assert.equal(account.user.email, 'google@test.vn');
+      const socialProfile = await nativeFetch(origin + '/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + account.token },
+        body: JSON.stringify({ Ten: 'Updated Google Reader' }),
+      });
+      assert.equal(socialProfile.status, 200);
+      assert.equal((await socialProfile.json()).user.name, 'Test Updated Google Reader');
       assert.equal(await DocGia.countDocuments(), 1);
       assert.equal(
         (await DocGia.findById(account.user.id).select('+Password')).Password,

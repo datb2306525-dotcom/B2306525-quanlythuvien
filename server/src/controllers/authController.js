@@ -65,3 +65,77 @@ export async function lockReader(req, res) {
   if (!user) return res.status(404).json({ message: 'Không tìm thấy độc giả.' });
   res.json(user);
 }
+
+const profileFields = [
+  'MaDocGia',
+  'HoLot',
+  'Ten',
+  'Email',
+  'NgaySinh',
+  'Phai',
+  'DiaChi',
+  'DienThoai',
+  'LoaiDocGia',
+];
+const editableProfileFields = [
+  'HoLot',
+  'Ten',
+  'NgaySinh',
+  'Phai',
+  'DiaChi',
+  'DienThoai',
+  'LoaiDocGia',
+];
+function publicProfile(reader) {
+  return Object.fromEntries(profileFields.map((key) => [key, reader[key]]));
+}
+export async function profile(req, res) {
+  res.json(publicProfile(req.user.profile));
+}
+export async function updateProfile(req, res) {
+  const data = Object.fromEntries(
+    editableProfileFields
+      .filter((key) => req.body[key] !== undefined)
+      .map((key) => [key, req.body[key]]),
+  );
+  if (!Object.keys(data).length)
+    return res.status(400).json({ message: 'Không có thông tin cần cập nhật.' });
+  for (const key of ['HoLot', 'Ten', 'DiaChi', 'DienThoai']) {
+    if (
+      data[key] !== undefined &&
+      (typeof data[key] !== 'string' ||
+        !data[key].trim() ||
+        data[key].length > (key === 'DiaChi' ? 500 : 100))
+    )
+      return res
+        .status(400)
+        .json({ message: 'Họ tên, địa chỉ và điện thoại không được để trống hoặc quá dài.' });
+  }
+  if (data.NgaySinh !== undefined) {
+    const date =
+      typeof data.NgaySinh === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.NgaySinh)
+        ? new Date(data.NgaySinh)
+        : new Date(NaN);
+    if (
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== data.NgaySinh ||
+      date > new Date()
+    )
+      return res.status(400).json({ message: 'Ngày sinh không hợp lệ.' });
+  }
+  const reader = await DocGia.findByIdAndUpdate(
+    req.user.id,
+    { $set: data },
+    { new: true, runValidators: true },
+  );
+  if (!reader) return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
+  res.json({
+    profile: publicProfile(reader),
+    user: {
+      id: reader.id,
+      role: 'Reader',
+      name: reader.HoLot + ' ' + reader.Ten,
+      email: reader.Email,
+    },
+  });
+}

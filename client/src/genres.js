@@ -9,6 +9,4 @@ export const defaultGenres = [
   'Tâm lý',
   'Kỹ năng sống',
 ];
-export const genresOf = (value) =>
-  Array.isArray(value) ? value : typeof value === 'string' && value.trim() ? [value.trim()] : [];
-export const genreLabel = (value) => genresOf(value).join(' · ');
+export { genresOf, genreLabel } from '../../shared/genres.js';

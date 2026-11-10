@@ -1,6 +1,7 @@
 <script setup>
 import { useLibraryContext } from '../composables/useLibrary';
 const {
+  logout,
   oauthProviders,
   socialLogin,
   today,
@@ -69,6 +70,26 @@ const {
       >
         {{ error }}
       </div>
+      <template v-if="modal === 'logout'">
+        <h2>Xác nhận đăng xuất</h2>
+        <p>Bạn có chắc muốn đăng xuất khỏi tài khoản {{ user?.name }}?</p>
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            @click="modal = ''"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            class="btn btn-navy"
+            @click="logout"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </template>
       <template v-if="modal === 'auth'"
         ><div class="eyebrow dark">WELCOME TO ATHENA</div>
         <h2>

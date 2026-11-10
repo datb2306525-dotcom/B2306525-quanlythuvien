@@ -1,3 +1,4 @@
+import { genresOf } from '../../../shared/genres.js';
 import { rankBooks } from './search.js';
 // The model selects identifiers only. Titles, stock and explanations come from MongoDB.
 export async function searchCatalog(books, question) {
@@ -8,7 +9,7 @@ export async function searchCatalog(books, question) {
       bookId: String(b._id),
       title: b.TenSach,
       author: b.NguonGocTacGia,
-      category: b.TheLoai,
+      category: genresOf(b.TheLoai),
       description: b.MoTa,
     }));
     const response = await fetch(process.env.OLLAMA_URL.replace(/\/$/, '') + '/api/chat', {
