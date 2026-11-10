@@ -41,7 +41,15 @@ const reader = new Schema(
     DiaChi: str,
     DienThoai: str,
     Email: { ...str, lowercase: true, unique: true },
-    Password: { type: String, required: true, select: false },
+    GoogleId: { type: String, unique: true, sparse: true, select: false },
+    FacebookId: { type: String, unique: true, sparse: true, select: false },
+    Password: {
+      type: String,
+      required: function () {
+        return !this.GoogleId && !this.FacebookId;
+      },
+      select: false,
+    },
     BiKhoa: { type: Boolean, default: false },
     LyDoKhoa: { type: String, default: '', maxlength: 1000 },
     LoaiDocGia: { type: String, enum: ['Sinh viên', 'Giảng viên'], default: 'Sinh viên' },
@@ -110,5 +118,19 @@ export const BaoCaoSach = model(
       NhanVien: { type: Schema.Types.ObjectId, ref: 'NhanVien', default: null },
     },
     options('BAOCAOSACH'),
+  ),
+);
+
+export const OAuthTicket = model(
+  'OAuthTicket',
+  new Schema(
+    {
+      _id: { type: String },
+      kind: { type: String, enum: ['state', 'exchange', 'signup'], required: true },
+      binding: { type: String, required: true },
+      data: { type: Schema.Types.Mixed, required: true },
+      expiresAt: { type: Date, required: true, expires: 0 },
+    },
+    { collection: 'OAUTH_TICKETS' },
   ),
 );

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { auth } from '../middleware/auth.js';
+import * as oauth from '../controllers/oauthController.js';
 import * as accounts from '../controllers/authController.js';
 import * as books from '../controllers/bookController.js';
 import * as loans from '../controllers/loanController.js';
@@ -15,6 +16,11 @@ const limit = rateLimit({
   legacyHeaders: false,
   message: { message: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.' },
 });
+router.get('/auth/oauth/providers', oauth.providers);
+router.get('/auth/oauth/:provider/start', limit, wrap(oauth.start));
+router.get('/auth/oauth/:provider/callback', limit, wrap(oauth.callback));
+router.post('/auth/oauth/exchange', limit, wrap(oauth.exchange));
+router.post('/auth/oauth/complete', limit, wrap(oauth.complete));
 router.post('/auth/register', limit, wrap(accounts.register));
 router.post('/auth/login', limit, wrap(accounts.login));
 router.get('/books', wrap(books.list));

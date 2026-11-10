@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import { DocGia, NhanVien } from '../models/index.js';
-function session(user, role) {
+export function session(user, role) {
   return {
     token: jwt.sign({ id: user.id, role }, process.env.JWT_SECRET, { expiresIn: '8h' }),
     user: {
@@ -39,7 +39,11 @@ export async function login(req, res) {
     .toLowerCase()
     .trim();
   const user = await (staff ? NhanVien : DocGia).findOne({ Email: email }).select('+Password');
-  if (!user || !(await bcrypt.compare(String(req.body.password || ''), user.Password)))
+  if (
+    !user ||
+    !user.Password ||
+    !(await bcrypt.compare(String(req.body.password || ''), user.Password))
+  )
     return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng.' });
   if (!staff && user.BiKhoa)
     return res.status(403).json({ message: 'Tài khoản đã bị khóa. ' + user.LyDoKhoa });

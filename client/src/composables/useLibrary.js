@@ -27,6 +27,7 @@ export function useLibrary() {
     personalized = ref(false),
     reports = ref([]),
     reportContent = ref('');
+  const oauthProviders = ref({ google: false, facebook: false });
   const modal = ref(''),
     selected = ref(null),
     busy = ref(false),
@@ -219,11 +220,13 @@ export function useLibrary() {
     busy.value = true;
     try {
       const r = await api(
-        '/auth/' + (authTab.value === 'register' && !adminPortal ? 'register' : 'login'),
+        authTab.value === 'social' && !adminPortal
+          ? '/auth/oauth/complete'
+          : '/auth/' + (authTab.value === 'register' && !adminPortal ? 'register' : 'login'),
         {
           method: 'POST',
           body:
-            authTab.value === 'register' && !adminPortal
+            ['register', 'social'].includes(authTab.value) && !adminPortal
               ? registerForm.value
               : { ...loginForm.value, portal: page.value === 'admin' ? 'admin' : 'reader' },
         },
@@ -234,6 +237,57 @@ export function useLibrary() {
       modal.value = '';
       notify('Đăng nhập thành công');
       await loadAccount();
+    } catch (e) {
+      error.value = e.message;
+    } finally {
+      busy.value = false;
+    }
+  }
+  function socialLogin(provider) {
+    if (adminPortal || !oauthProviders.value[provider]) return;
+    location.assign('/api/auth/oauth/' + provider + '/start');
+  }
+  async function socialCallback() {
+    if (adminPortal || location.pathname !== '/auth/callback') return;
+    const params = new URLSearchParams(location.hash.slice(1));
+    history.replaceState({}, '', '/');
+    page.value = 'home';
+    modal.value = 'auth';
+    if (params.has('oauth_error')) {
+      error.value = params.get('oauth_error');
+      return;
+    }
+    if (!params.get('oauth_code')) {
+      error.value = 'Thiếu mã đăng nhập. Vui lòng thử lại.';
+      return;
+    }
+    busy.value = true;
+    try {
+      const result = await api('/auth/oauth/exchange', {
+        method: 'POST',
+        body: { code: params.get('oauth_code') },
+      });
+      if (result.profileRequired) {
+        const parts = result.profile.name.trim().split(/\s+/);
+        registerForm.value = {
+          HoLot: parts.length > 1 ? parts.slice(0, -1).join(' ') : '',
+          Ten: parts.at(-1) || '',
+          Email: result.profile.email,
+          Password: '',
+          NgaySinh: '',
+          Phai: 'Khác',
+          DiaChi: '',
+          DienThoai: '',
+          LoaiDocGia: 'Sinh viên',
+        };
+        authTab.value = 'social';
+      } else {
+        localStorage.setItem('athena-token', result.token);
+        localStorage.setItem('athena-user', JSON.stringify(result.user));
+        user.value = result.user;
+        modal.value = '';
+        notify('Đăng nhập thành công');
+      }
     } catch (e) {
       error.value = e.message;
     } finally {
@@ -406,6 +460,14 @@ export function useLibrary() {
     }
   }
   onMounted(async () => {
+    if (!adminPortal) {
+      try {
+        oauthProviders.value = await api('/auth/oauth/providers');
+      } catch {
+        /* Email login remains available. */
+      }
+      await socialCallback();
+    }
     if (localStorage.getItem(sessionKey + 'token')) {
       try {
         const profile = await api('/auth/me');
@@ -424,6 +486,8 @@ export function useLibrary() {
   });
 
   return {
+    oauthProviders,
+    socialLogin,
     today,
     returnDateLimit,
     borrowForm,

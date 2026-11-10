@@ -1,6 +1,8 @@
 <script setup>
 import { useLibraryContext } from '../composables/useLibrary';
 const {
+  oauthProviders,
+  socialLogin,
   today,
   returnDateLimit,
   borrowForm,
@@ -71,16 +73,52 @@ const {
         ><div class="eyebrow dark">WELCOME TO ATHENA</div>
         <h2>
           {{
-            authTab === 'register'
-              ? 'Tạo tài khoản độc giả'
-              : page === 'admin'
-                ? 'Đăng nhập quản trị'
-                : 'Chào mừng bạn trở lại'
+            authTab === 'social'
+              ? 'Hoàn thiện hồ sơ độc giả'
+              : authTab === 'register'
+                ? 'Tạo tài khoản độc giả'
+                : page === 'admin'
+                  ? 'Đăng nhập quản trị'
+                  : 'Chào mừng bạn trở lại'
           }}
         </h2>
         <p class="muted">Một tài khoản, cả một thế giới tri thức.</p>
+        <template v-if="page !== 'admin' && authTab !== 'social'">
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <button
+              type="button"
+              class="btn btn-outline-secondary flex-fill"
+              :disabled="busy || !oauthProviders.google"
+              @click="socialLogin('google')"
+            >
+              <i class="bi bi-google"></i> Tiếp tục với Google
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary flex-fill"
+              :disabled="busy || !oauthProviders.facebook"
+              @click="socialLogin('facebook')"
+            >
+              <i class="bi bi-facebook"></i> Tiếp tục với Facebook
+            </button>
+          </div>
+          <p
+            v-if="!oauthProviders.google && !oauthProviders.facebook"
+            class="muted small"
+          >
+            Đăng nhập Google/Facebook chưa được bật.
+          </p>
+          <p class="muted small">Hoặc sử dụng email và mật khẩu</p>
+        </template>
+        <p
+          v-if="authTab === 'social'"
+          class="policy-note"
+        >
+          Tài khoản đã được xác thực. Bổ sung thông tin bên dưới để đăng ký độc giả và mượn sách;
+          không cần tạo mật khẩu.
+        </p>
         <form @submit.prevent="authenticate">
-          <template v-if="authTab === 'register'"
+          <template v-if="['register', 'social'].includes(authTab)"
             ><div class="row g-3">
               <label class="col-7"
                 >Họ lót<input
@@ -111,10 +149,13 @@ const {
               ><label class="col-12"
                 >Email<input
                   v-model="registerForm.Email"
+                  :readonly="authTab === 'social'"
                   type="email"
                   required
                   class="form-control" /></label
-              ><label class="col-12"
+              ><label
+                v-if="authTab !== 'social'"
+                class="col-12"
                 >Mật khẩu<input
                   v-model="registerForm.Password"
                   type="password"
@@ -160,7 +201,15 @@ const {
             class="btn btn-navy w-100 mt-4"
             :disabled="busy"
           >
-            {{ busy ? 'Đang xử lý…' : authTab === 'register' ? 'Đăng ký' : 'Đăng nhập' }}
+            {{
+              busy
+                ? 'Đang xử lý…'
+                : authTab === 'social'
+                  ? 'Hoàn tất đăng ký'
+                  : authTab === 'register'
+                    ? 'Đăng ký'
+                    : 'Đăng nhập'
+            }}
             <i class="bi bi-arrow-right"></i>
           </button>
         </form>
@@ -173,7 +222,11 @@ const {
           "
         >
           {{
-            authTab === 'login' ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'
+            authTab === 'social'
+              ? 'Quay lại đăng nhập bằng email'
+              : authTab === 'login'
+                ? 'Chưa có tài khoản? Đăng ký ngay'
+                : 'Đã có tài khoản? Đăng nhập'
           }}
         </button></template
       >
