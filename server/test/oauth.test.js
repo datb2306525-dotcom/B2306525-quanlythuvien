@@ -47,6 +47,7 @@ test(
       const { OAuth2Client } = await import('google-auth-library');
       const hash = (value) => createHash('sha256').update(value).digest('hex');
       let googlePayload;
+      let tokenFailure = false;
       mock.method(OAuth2Client.prototype, 'verifyIdToken', async (options) => {
         assert.equal(options.audience, 'test-google-client');
         return { getPayload: () => googlePayload };
@@ -55,6 +56,11 @@ test(
         const address = String(url);
         if (address === 'https://oauth2.googleapis.com/token') {
           assert.ok(options.body.get('code_verifier'));
+          if (tokenFailure)
+            return Response.json(
+              { error: 'invalid_client', error_description: 'DO_NOT_EXPOSE_PROVIDER_DETAIL' },
+              { status: 401 },
+            );
           return Response.json({ id_token: 'mock-id-token' });
         }
         if (address.includes('/oauth/access_token'))
@@ -96,6 +102,12 @@ test(
         assert.equal(response.status, 302);
         return new URLSearchParams(new URL(response.headers.get('location')).hash.slice(1));
       }
+      const rejected = await begin();
+      tokenFailure = true;
+      const rejectedMessage = (await callback(rejected)).get('oauth_error');
+      assert.match(rejectedMessage, /Client ID/);
+      assert.ok(!rejectedMessage.includes('DO_NOT_EXPOSE_PROVIDER_DETAIL'));
+      tokenFailure = false;
       const attempt = await begin();
       assert.ok((await callback(attempt, '')).has('oauth_error'));
       const params = await callback(attempt);

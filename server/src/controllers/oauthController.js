@@ -32,8 +32,8 @@ function settings(provider) {
     return null;
   // The browser cookie exchange requires same-origin hosting in production.
   if (process.env.NODE_ENV === 'production' && api.origin !== client.origin) return null;
-  const id = process.env[prefix + '_CLIENT_ID'];
-  const secret = process.env[prefix + '_CLIENT_SECRET'];
+  const id = process.env[prefix + '_CLIENT_ID']?.trim();
+  const secret = process.env[prefix + '_CLIENT_SECRET']?.trim();
   const version = process.env.FACEBOOK_GRAPH_VERSION;
   if (!id || !secret || (provider === 'facebook' && !/^v\d+\.\d+$/.test(version || '')))
     return null;
@@ -86,7 +86,27 @@ async function ticket(kind, data, binding) {
 async function json(url, options = {}) {
   const response = await fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
   const data = await response.json();
-  if (!response.ok || data.error) throw fail('Không xác minh được tài khoản. Vui lòng thử lại.');
+  if (!response.ok || data.error) {
+    const code = typeof data.error === 'string' ? data.error : '';
+    const messages = {
+      invalid_client:
+        'Google từ chối Client ID hoặc Client Secret. Quản trị cần kiểm tra hai khóa thuộc cùng một OAuth Web client trên Render.',
+      invalid_grant:
+        'Mã đăng nhập Google đã hết hạn, đã dùng hoặc không khớp. Hãy bắt đầu đăng nhập lại trong một tab duy nhất.',
+      redirect_uri_mismatch:
+        'Địa chỉ callback Google không khớp. Quản trị cần kiểm tra Authorized redirect URIs và OAUTH_PUBLIC_ORIGIN.',
+      access_denied:
+        'Google chưa cho phép truy cập tài khoản này. Hãy kiểm tra danh sách Test users nếu ứng dụng đang ở chế độ thử nghiệm.',
+      unauthorized_client:
+        'OAuth client chưa được phép dùng cách đăng nhập này. Hãy kiểm tra loại ứng dụng Web application trong Google Console.',
+    };
+    // Only log fixed codes and status, never responses, tokens, secrets or request URLs.
+    console.warn('[OAuth] Provider request rejected', {
+      status: response.status,
+      code: Object.hasOwn(messages, code) ? code : 'unknown',
+    });
+    throw fail(messages[code] || 'Không xác minh được tài khoản. Vui lòng thử lại.');
+  }
   return data;
 }
 export function providers(_req, res) {
