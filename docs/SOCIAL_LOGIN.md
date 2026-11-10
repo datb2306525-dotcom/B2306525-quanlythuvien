@@ -1,4 +1,4 @@
-﻿# Đăng nhập độc giả bằng Google và Facebook
+﻿# Đăng nhập độc giả bằng Google
 
 Mã nguồn đã hỗ trợ OAuth authorization code phía máy chủ. Tính năng chỉ bật cho từng nhà cung cấp sau khi điền đủ cấu hình. Không áp dụng cho tài khoản quản trị. Cần tạo ứng dụng trong tài khoản Google/Meta của chủ website; mã nguồn không tự tạo được các khóa này.
 
@@ -31,14 +31,7 @@ Tài liệu: https://developers.google.com/identity/openid-connect/openid-connec
 
 ## Facebook
 
-1. Mở https://developers.facebook.com/apps/, tạo ứng dụng phù hợp với use case đăng nhập người dùng bằng Facebook.
-2. Bật/cấu hình Facebook Login, Web OAuth Login và Client OAuth Login nếu dashboard hiển thị các mục này.
-3. Thêm Valid OAuth Redirect URI chính xác: https://TEN-SERVICE.onrender.com/api/auth/oauth/facebook/callback
-4. Điền URL website và domain thực tế của ứng dụng. Lấy App ID, App Secret và Graph API version app đang sử dụng để điền vào Render.
-5. Cấu hình public_profile và email. Để dùng công khai, hoàn tất các yêu cầu của Meta Dashboard về chế độ phát hành, quyền truy cập, chính sách quyền riêng tư và hướng dẫn/URL xóa dữ liệu; các yêu cầu có thể khác theo loại ứng dụng. Khi app chưa công khai, thử bằng tài khoản có vai trò trong ứng dụng theo cấu hình Meta.
-6. Nếu Facebook không trả email hoặc người dùng không cho phép chia sẻ email, website yêu cầu dùng phương thức đăng nhập khác; không tự tạo email giả.
-
-Tài liệu: https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/
+Facebook hiện đã tắt theo yêu cầu: không hiển thị nút và API không cho bắt đầu đăng nhập, kể cả khi còn biến cấu hình Facebook trên Render. Chỉ cần cấu hình Google.
 
 ## Hành vi và dữ liệu
 

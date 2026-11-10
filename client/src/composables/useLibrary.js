@@ -244,7 +244,7 @@ export function useLibrary() {
     }
   }
   function socialLogin(provider) {
-    if (adminPortal || !oauthProviders.value[provider]) return;
+    if (adminPortal || provider !== 'google' || !oauthProviders.value.google) return;
     location.assign('/api/auth/oauth/' + provider + '/start');
   }
   async function socialCallback() {

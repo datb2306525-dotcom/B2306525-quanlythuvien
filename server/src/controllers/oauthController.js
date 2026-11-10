@@ -8,6 +8,7 @@ const hash = (value) => createHash('sha256').update(value).digest('hex');
 const fail = (message) => Object.assign(new Error(message), { status: 400 });
 const duration = 10 * 60 * 1000;
 function settings(provider) {
+  if (provider === 'facebook') return null;
   if (!['google', 'facebook'].includes(provider)) throw fail('Nhà cung cấp không hợp lệ.');
   const prefix = provider.toUpperCase();
   const origin = process.env.OAUTH_PUBLIC_ORIGIN || '';
@@ -232,12 +233,10 @@ export async function exchange(req, res) {
     return res.json(session(reader, 'Reader'));
   }
   if (await DocGia.exists({ Email: identity.email }))
-    return res
-      .status(409)
-      .json({
-        message:
-          'Email đã có tài khoản độc giả. Vui lòng dùng phương thức đăng nhập ban đầu; không tự ghép tài khoản.',
-      });
+    return res.status(409).json({
+      message:
+        'Email đã có tài khoản độc giả. Vui lòng dùng phương thức đăng nhập ban đầu; không tự ghép tài khoản.',
+    });
   const signup = await ticket('signup', identity, hash(browser));
   res.cookie('athena-social-signup', signup, cookieOptions());
   res.json({
@@ -250,8 +249,7 @@ export async function complete(req, res) {
   res.set('Cache-Control', 'no-store');
   const key = cookie(req, 'athena-social-signup'),
     browser = cookie(req, 'athena-oauth');
-  if (!key || !browser)
-    throw fail('Phiên đăng ký đã hết hạn. Hãy đăng nhập lại bằng Google/Facebook.');
+  if (!key || !browser) throw fail('Phiên đăng ký đã hết hạn. Hãy đăng nhập lại bằng Google.');
   const record = await OAuthTicket.findOne({
     _id: hash(key),
     kind: 'signup',

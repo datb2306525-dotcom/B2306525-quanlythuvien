@@ -93,20 +93,12 @@ const {
             >
               <i class="bi bi-google"></i> Tiếp tục với Google
             </button>
-            <button
-              type="button"
-              class="btn btn-outline-secondary flex-fill"
-              :disabled="busy || !oauthProviders.facebook"
-              @click="socialLogin('facebook')"
-            >
-              <i class="bi bi-facebook"></i> Tiếp tục với Facebook
-            </button>
           </div>
           <p
-            v-if="!oauthProviders.google && !oauthProviders.facebook"
+            v-if="!oauthProviders.google"
             class="muted small"
           >
-            Đăng nhập Google/Facebook chưa được bật.
+            Đăng nhập Google chưa được bật.
           </p>
           <p class="muted small">Hoặc sử dụng email và mật khẩu</p>
         </template>

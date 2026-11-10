@@ -41,7 +41,7 @@ test(
       process.env.FACEBOOK_GRAPH_VERSION = 'v25.0';
       assert.deepEqual(await (await request('/providers')).json(), {
         google: true,
-        facebook: true,
+        facebook: false,
       });
       const { OAuthTicket, DocGia } = await import('../src/models/index.js');
       const { OAuth2Client } = await import('google-auth-library');
@@ -148,13 +148,11 @@ test(
       const locked = await begin();
       const lockedCode = (await callback(locked)).get('oauth_code');
       assert.equal((await request('/exchange', { code: lockedCode }, locked.cookie)).status, 403);
-      // Facebook is independently verified and cannot silently merge with Google by email.
-      const facebook = await begin('facebook');
-      const facebookCode = (await callback(facebook)).get('oauth_code');
-      const fbExchange = await request('/exchange', { code: facebookCode }, facebook.cookie);
-      assert.equal((await fbExchange.json()).profile.email, 'facebook@test.vn');
-      const collision = await begin('facebook');
-      await DocGia.findByIdAndUpdate(account.user.id, { Email: 'facebook@test.vn' });
+      // Disabled Facebook cannot be enabled by leftover environment variables.
+      assert.equal((await request('/facebook/start')).status, 503);
+      // A different Google identity cannot silently merge into the existing account.
+      const collision = await begin();
+      googlePayload.sub = 'another-google-reader';
       const collisionCode = (await callback(collision)).get('oauth_code');
       assert.equal(
         (await request('/exchange', { code: collisionCode }, collision.cookie)).status,
