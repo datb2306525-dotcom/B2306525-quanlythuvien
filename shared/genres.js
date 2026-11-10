@@ -18,3 +18,13 @@ export function genresOf(value) {
   return [...new Set(read(value))];
 }
 export const genreLabel = (value) => genresOf(value).join(' · ');
+
+export const genreKey = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .trim()
+    .toLowerCase();
+export const matchesGenre = (value, category) =>
+  genresOf(value).some((genre) => genreKey(genre) === genreKey(category));

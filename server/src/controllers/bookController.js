@@ -1,4 +1,4 @@
-import { genresOf, genreLabel } from '../../../shared/genres.js';
+import { genresOf, genreLabel, matchesGenre } from '../../../shared/genres.js';
 import { Sach, NhaXuatBan, TheoDoiMuonSach } from '../models/index.js';
 import { normalize } from '../services/search.js';
 import { searchCatalog } from '../services/ai.js';
@@ -12,7 +12,7 @@ export async function list(req, res) {
           normalize(
             `${b.TenSach} ${b.NguonGocTacGia} ${genreLabel(b.TheLoai)} ${b.DanhMuc || ''}`,
           ).includes(q)) &&
-        (!req.query.category || genresOf(b.TheLoai).includes(req.query.category)) &&
+        (!req.query.category || matchesGenre(b.TheLoai, req.query.category)) &&
         (!req.query.catalog || b.DanhMuc === req.query.catalog) &&
         (!req.query.publisher || String(b.MaNXB?._id) === req.query.publisher),
     ),

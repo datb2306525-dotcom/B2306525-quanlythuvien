@@ -1,5 +1,5 @@
 import { ref, computed, onMounted, onUnmounted, watch, inject } from 'vue';
-import { defaultGenres, genresOf, genreLabel } from '../genres';
+import { defaultGenres, genresOf, genreLabel, readerCategories, filterCatalog } from '../genres';
 import { api } from '../api';
 
 export const libraryKey = Symbol('library');
@@ -131,22 +131,14 @@ export function useLibrary() {
       busy.value = false;
     }
   }
-  const categories = computed(() => ['Tất cả', ...genreOptions.value]);
+  const categories = readerCategories;
   const norm = (s) =>
     String(s || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd')
       .toLowerCase();
-  const filtered = computed(() =>
-    books.value.filter(
-      (b) =>
-        (category.value === 'Tất cả' || genresOf(b.TheLoai).includes(category.value)) &&
-        norm(b.TenSach + ' ' + b.NguonGocTacGia + ' ' + genreLabel(b.TheLoai)).includes(
-          norm(query.value),
-        ),
-    ),
-  );
+  const filtered = computed(() => filterCatalog(books.value, category.value, query.value));
   const isStaff = computed(() => user.value && ['Admin', 'Librarian'].includes(user.value.role));
   const labels = {
     ChoDuyet: 'Chờ duyệt',
