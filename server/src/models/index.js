@@ -108,6 +108,35 @@ export const Sach = model('Sach', book);
 export const DocGia = model('DocGia', reader);
 export const NhanVien = model('NhanVien', staff);
 export const TheoDoiMuonSach = model('TheoDoiMuonSach', loan);
+const bookRequest = new Schema(
+  {
+    MaYeuCau: { ...str, unique: true },
+    MaDocGia: { type: Schema.Types.ObjectId, ref: 'DocGia', required: true },
+    TenSach: { ...str, maxlength: 200 },
+    TacGia: { type: String, trim: true, default: '', maxlength: 200 },
+    ISBN: { type: String, trim: true, default: '', maxlength: 32 },
+    LyDo: { ...str, maxlength: 2000 },
+    KhoaTrung: { ...str, select: false },
+    TrangThai: {
+      type: String,
+      enum: ['Moi', 'DangXemXet', 'DaBoSung', 'TuChoi', 'DaHuy'],
+      default: 'Moi',
+    },
+    PhanHoi: { type: String, trim: true, default: '', maxlength: 2000 },
+    MaSach: { type: Schema.Types.ObjectId, ref: 'Sach', default: null },
+    NhanVien: { type: Schema.Types.ObjectId, ref: 'NhanVien', default: null },
+    NgayXuLy: { type: Date, default: null },
+  },
+  options('YEUCAUBOSUNGSACH'),
+);
+bookRequest.index(
+  { MaDocGia: 1, KhoaTrung: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { TrangThai: { $in: ['Moi', 'DangXemXet'] } },
+  },
+);
+export const YeuCauBoSungSach = model('YeuCauBoSungSach', bookRequest);
 export const BaoCaoSach = model(
   'BaoCaoSach',
   new Schema(

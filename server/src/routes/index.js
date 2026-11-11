@@ -6,6 +6,7 @@ import * as accounts from '../controllers/authController.js';
 import * as books from '../controllers/bookController.js';
 import * as loans from '../controllers/loanController.js';
 import * as reports from '../controllers/reportController.js';
+import * as bookRequests from '../controllers/bookRequestController.js';
 const router = Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const staff = auth(['Admin', 'Librarian']);
@@ -58,6 +59,9 @@ router.get('/auth/me', auth(), (req, res) =>
   }),
 );
 router.get('/reports', auth(), wrap(reports.list));
+router.get('/book-requests', auth(), wrap(bookRequests.list));
+router.post('/book-requests', auth(['Reader']), limit, wrap(bookRequests.create));
+router.patch('/book-requests/:id', auth(), wrap(bookRequests.update));
 router.post('/reports', auth(['Reader']), limit, wrap(reports.create));
 router.patch('/reports/:id', staff, wrap(reports.update));
 export default router;

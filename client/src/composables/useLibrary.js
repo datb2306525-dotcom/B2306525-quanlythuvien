@@ -10,7 +10,7 @@ export function useLibrary() {
   const sessionKey = adminPortal ? 'athena-admin-' : 'athena-';
   const initialPage = location.pathname.split('/')[1];
   const page = ref(
-      ['admin', 'catalog', 'loans', 'recommendations', 'account'].includes(initialPage)
+      ['admin', 'catalog', 'loans', 'recommendations', 'account', 'requests'].includes(initialPage)
         ? initialPage
         : 'home',
     ),
@@ -208,7 +208,9 @@ export function useLibrary() {
       location.reload();
       return;
     }
-    page.value = ['admin', 'catalog', 'loans', 'recommendations', 'account'].includes(target)
+    page.value = ['admin', 'catalog', 'loans', 'recommendations', 'account', 'requests'].includes(
+      target,
+    )
       ? target
       : 'home';
     if (['loans', 'admin'].includes(page.value)) loadAccount();

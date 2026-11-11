@@ -160,6 +160,12 @@ const {
         >
           <i class="bi bi-search"></i>
           <h3>Chưa tìm thấy sách</h3>
+          <button
+            class="btn btn-navy mt-2 mb-3"
+            @click="navigate('requests')"
+          >
+            <i class="bi bi-journal-plus"></i> Yêu cầu bổ sung sách
+          </button>
           <p>
             {{
               books.length

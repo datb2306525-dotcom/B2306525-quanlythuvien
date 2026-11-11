@@ -12,6 +12,7 @@ import HomeView from './views/HomeView.vue';
 import AdminView from './views/AdminView.vue';
 import LoansView from './views/LoansView.vue';
 import RecommendationsView from './views/RecommendationsView.vue';
+import BookRequestsView from './views/BookRequestsView.vue';
 
 const library = useLibrary();
 provide(libraryKey, library);
@@ -60,6 +61,7 @@ const { adminPortal, user, requestLogout, page, error, modal, notice, load } = l
   <AccountView v-else-if="page === 'account'" />
   <LoansView v-else-if="page === 'loans'" />
   <RecommendationsView v-else-if="page === 'recommendations'" />
+  <BookRequestsView v-else-if="page === 'requests'" />
   <LoansTable v-if="!adminPortal" />
   <div
     v-if="!adminPortal && page === 'loans' && user"

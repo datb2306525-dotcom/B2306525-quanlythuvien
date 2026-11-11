@@ -1,5 +1,21 @@
 # Athena — Website quản lý thư viện
 
+## Phiếu yêu cầu bổ sung sách
+
+Độc giả mở **Yêu cầu sách** (`/requests`) hoặc chọn **Yêu cầu bổ sung sách** khi tìm kiếm không có kết quả. Sau khi đăng nhập, nhập tên sách, lý do đề xuất (bắt buộc), tác giả và ISBN (nếu biết). Phiếu được lưu trong MongoDB; người gửi xem lịch sử, phản hồi và có thể hủy phiếu mới chưa được xem xét. Tên sách trong ô tìm kiếm được điền sẵn khi mở biểu mẫu từ kết quả tra cứu.
+
+Thủ thư/Admin mở **Quản trị → Yêu cầu bổ sung sách**, lọc trạng thái, xem thông tin độc giả và xử lý: **Chờ xem xét → Đang xem xét → Đã bổ sung / Từ chối**. Có thể hoàn tất trực tiếp từ trạng thái mới. Hoàn tất phải có phản hồi; xác nhận “Đã bổ sung” phải chọn một sách thực đã thêm vào danh mục. Phiếu không tự tạo sách hay thay đổi tồn kho. Độc giả có nút xem sách đã bổ sung để đăng ký mượn theo quy trình thông thường.
+
+Collection bổ sung `YEUCAUBOSUNGSACH` gồm `MaYeuCau`, `MaDocGia`, `TenSach`, `TacGia`, `ISBN`, `LyDo`, `KhoaTrung`, `TrangThai`, `PhanHoi`, `MaSach`, `NhanVien`, `NgayXuLy`, `createdAt`, `updatedAt`. Index duy nhất có điều kiện ngăn cùng độc giả gửi trùng tên sách/tác giả đã chuẩn hóa khi phiếu đang mới hoặc đang xem xét. Các collection bắt buộc ban đầu vẫn được giữ nguyên. Collection và index mới được tạo khi backend khởi động; không cần seed lại hoặc đặt lại dữ liệu.
+
+API theo MVC tại `server/src/controllers/bookRequestController.js`:
+
+- `GET /api/book-requests`: độc giả chỉ xem phiếu của mình; nhân viên xem toàn bộ.
+- `POST /api/book-requests`: Reader gửi `{ title, author?, isbn?, reason }`.
+- `PATCH /api/book-requests/:id`: Reader chỉ gửi `{ action: "cancel" }` cho phiếu mới của mình; nhân viên gửi `{ status, response, bookId? }`.
+
+Các trạng thái lưu: `Moi`, `DangXemXet`, `DaBoSung`, `TuChoi`, `DaHuy`. Phiếu kết thúc không được sửa lại. Cập nhật có kiểm tra trạng thái trong điều kiện ghi để tránh ghi đè khi xử lý đồng thời. Tài khoản bị khóa không thể tạo phiếu. Yêu cầu bổ sung là đề xuất, không phải phiếu mượn hay cam kết nhập sách.
+
 ## Gemini trên Render
 
 Athena đã hỗ trợ Google Gemini, có lựa chọn đồng ý trước khi gửi câu hỏi và ngữ cảnh tới Google. Làm theo [hướng dẫn Gemini trên Render](docs/GEMINI_RENDER.md): cập nhật source, đặt `AI_PROVIDER=gemini`, `GEMINI_API_KEY` và `GEMINI_MODEL=gemini-2.5-flash` trong Environment của backend rồi deploy lại. Không đặt key ở frontend hoặc commit `.env`.

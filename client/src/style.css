@@ -13,6 +13,42 @@
   overflow-wrap: anywhere;
 }
 
+.book-requests-page {
+  padding-bottom: 50px;
+}
+
+.book-requests-panel h2 {
+  font-size: 24px;
+}
+
+.book-requests-panel label {
+  display: block;
+  font-size: 12px;
+}
+
+.book-requests-panel .request-copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.book-requests-panel article small {
+  overflow-wrap: anywhere;
+}
+
+.request-processing {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 580px) {
+  .nav-wrap nav {
+    overflow-x: auto;
+    flex-shrink: 0;
+    gap: 16px;
+    justify-content: flex-start;
+  }
+}
+
 .chat-privacy {
   padding: 10px 15px;
   border-top: 1px solid #e1e7eb;

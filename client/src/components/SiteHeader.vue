@@ -45,6 +45,12 @@ const { page, user, loans, recommendations, navigate, requestLogout, openAuth } 
           @click.prevent="navigate('loans')"
           >Sách của tôi</a
         >
+        <a
+          href="/requests"
+          :class="{ active: page === 'requests' }"
+          @click.prevent="navigate('requests')"
+          >Yêu cầu sách</a
+        >
       </nav>
       <div class="nav-actions">
         <button

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { genresOf } from '../genres';
 import LoansTable from '../components/LoansTable.vue';
 import ReportsPanel from '../components/ReportsPanel.vue';
+import BookRequestsPanel from '../components/BookRequestsPanel.vue';
 import { useLibraryContext } from '../composables/useLibrary';
 const {
   page,
@@ -70,6 +71,7 @@ const managedBooks = computed(() =>
           publishers: 'Nhà xuất bản',
           readers: 'Độc giả',
           reports: 'Báo cáo & phản hồi',
+          requests: 'Yêu cầu bổ sung sách',
         }"
         :key="key"
         :class="{ selected: adminTab === key }"
@@ -85,6 +87,7 @@ const managedBooks = computed(() =>
               publishers: 'buildings',
               readers: 'people',
               reports: 'chat-left-text',
+              requests: 'journal-plus',
             }[key]
           "
         ></i
@@ -121,6 +124,7 @@ const managedBooks = computed(() =>
                   publishers: 'Nhà xuất bản',
                   readers: 'Danh sách độc giả',
                   reports: 'Xử lý báo cáo & phản hồi',
+                  requests: 'Yêu cầu bổ sung sách',
                 }[adminTab]
               }}
             </h1>
@@ -207,6 +211,7 @@ const managedBooks = computed(() =>
         </div>
         <LoansTable v-if="adminTab === 'loans'" />
         <ReportsPanel v-if="adminTab === 'reports'" />
+        <BookRequestsPanel v-if="adminTab === 'requests'" />
         <template v-if="adminTab === 'books'"
           ><button
             class="btn btn-navy mb-3"
