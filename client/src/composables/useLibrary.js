@@ -43,11 +43,24 @@ export function useLibrary() {
     chat = ref([]),
     chatBusy = ref(false);
   const chatConfig = ref({ provider: 'catalog', configured: false, requiresConsent: false });
-  const externalAIConsent = ref(false);
+  const consentStorageKey = sessionKey + 'gemini-consent-v1';
+  let sessionConsent = false;
+  try {
+    sessionConsent = sessionStorage.getItem(consentStorageKey) === 'true';
+  } catch {
+    // If storage is disabled, keep consent in memory for this page only.
+  }
+  const externalAIConsent = ref(sessionConsent);
   const chatConfigLoaded = ref(false);
   watch(
     externalAIConsent,
     () => {
+      try {
+        if (externalAIConsent.value) sessionStorage.setItem(consentStorageKey, 'true');
+        else sessionStorage.removeItem(consentStorageKey);
+      } catch {
+        // The current page can still remember the explicit choice.
+      }
       // Each consent period starts fresh; earlier local messages are not exported later.
       for (const message of chat.value) message.shareWithGoogle = false;
     },
@@ -357,6 +370,8 @@ export function useLibrary() {
     }
   }
   function logout() {
+    externalAIConsent.value = false;
+    chat.value = [];
     localStorage.removeItem(sessionKey + 'token');
     localStorage.removeItem(sessionKey + 'user');
     user.value = null;

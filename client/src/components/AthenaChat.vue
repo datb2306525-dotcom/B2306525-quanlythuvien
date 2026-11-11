@@ -37,7 +37,6 @@ watch(chatOpen, async (open) => {
 function newConversation() {
   if (!chatBusy.value) {
     chat.value = [];
-    externalAIConsent.value = false;
     question.value = '';
     chatInput.value?.focus();
   }
@@ -189,7 +188,7 @@ function newConversation() {
       </p>
     </div>
     <div
-      v-if="chatConfig.requiresConsent"
+      v-if="chatConfig.requiresConsent && !externalAIConsent"
       class="chat-privacy"
     >
       <label>
@@ -205,8 +204,8 @@ function newConversation() {
       </label>
       <small
         >Google có thể dùng nội dung ở gói miễn phí để cải thiện sản phẩm. Tránh chia sẻ thông tin
-        nhạy cảm. Bỏ chọn để chỉ dùng dữ liệu thư viện; việc này không thu hồi nội dung đã
-        gửi.</small
+        nhạy cảm. Chỉ cần xác nhận một lần trong phiên tab này; bạn có thể chọn “Tắt AI” bất cứ lúc
+        nào. Việc tắt không thu hồi nội dung đã gửi.</small
       >
       <a
         href="https://ai.google.dev/gemini-api/terms"
@@ -231,8 +230,15 @@ function newConversation() {
       </button>
     </form>
     <small class="chat-disclaimer"
-      >Athena ghi nhớ hội thoại khi đang mở trang · AI có thể nhầm, hãy đối chiếu thông tin
-      sách</small
+      >Athena ghi nhớ hội thoại khi đang mở trang · AI có thể nhầm, hãy đối chiếu thông tin sách
+      <button
+        v-if="chatConfig.requiresConsent && externalAIConsent"
+        class="text-link ms-2"
+        :disabled="chatBusy"
+        @click="externalAIConsent = false"
+      >
+        Tắt AI
+      </button></small
     >
   </section>
 </template>
