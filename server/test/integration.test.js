@@ -402,6 +402,20 @@ test(
       assert.equal(ai.status, 200);
       assert.equal(ai.data.results[0].bookId, book.id);
       assert.equal(ai.data.results[0].available, false);
+      const followup = await request('/ai/search', 'POST', {
+        question: 'Cuốn này nói về gì?',
+        history: [{ role: 'assistant', text: ai.data.answer, bookIds: [book.id] }],
+      });
+      assert.equal(followup.status, 200);
+      assert.equal(followup.data.results[0].bookId, book.id);
+      assert.match(followup.data.answer, /chưa phải tóm tắt từ toàn văn/);
+      const guide = await request('/ai/search', 'POST', { question: 'Hướng dẫn mượn sách' });
+      assert.match(guide.data.answer, /Chờ nhận/);
+      assert.deepEqual(guide.data.results, []);
+      assert.equal(
+        (await request('/ai/search', 'POST', { question: 'Python', history: {} })).status,
+        400,
+      );
       assert.equal(
         (await request('/ai/search', 'POST', { question: 'thiên văn lượng tử' })).data.results
           .length,
@@ -612,6 +626,71 @@ test(
       assert.equal(rec.status, 200);
       assert.equal(rec.data.personalized, true);
       assert.ok(rec.data.books.every((b) => b._id !== normalBook.id));
+      // Exercise Gemini through the HTTP controller without contacting Google.
+      const previousFetch = globalThis.fetch;
+      const savedAiEnv = Object.fromEntries(
+        ['AI_PROVIDER', 'GEMINI_API_KEY', 'GEMINI_MODEL'].map((key) => [key, process.env[key]]),
+      );
+      process.env.AI_PROVIDER = 'gemini';
+      process.env.GEMINI_API_KEY = 'integration-fake-key';
+      process.env.GEMINI_MODEL = 'gemini-2.5-flash';
+      let googleRequests = 0;
+      globalThis.fetch = async (url, options) => {
+        if (String(url).startsWith('https://generativelanguage.googleapis.com/')) {
+          googleRequests += 1;
+          return {
+            ok: true,
+            json: async () => ({
+              candidates: [
+                {
+                  finishReason: 'STOP',
+                  content: {
+                    parts: [
+                      {
+                        text: JSON.stringify({
+                          answer: 'Cuốn Python này giúp bạn bắt đầu qua thực hành.',
+                          bookIds: [book.id],
+                          outside: [],
+                        }),
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+          };
+        }
+        return previousFetch(url, options);
+      };
+      try {
+        const config = await request('/ai/config');
+        assert.deepEqual(config.data, {
+          provider: 'gemini',
+          configured: true,
+          requiresConsent: true,
+        });
+        assert.ok(!JSON.stringify(config.data).includes('integration-fake-key'));
+        const local = await request('/ai/search', 'POST', {
+          question: 'Python',
+          externalAIConsent: false,
+        });
+        assert.equal(local.data.consentRequired, true);
+        assert.equal(googleRequests, 0);
+        const external = await request('/ai/search', 'POST', {
+          question: 'Python',
+          externalAIConsent: true,
+        });
+        assert.equal(external.data.mode, 'gemini');
+        assert.equal(external.data.results[0].bookId, book.id);
+        assert.equal(external.data.results[0].available, false);
+        assert.equal(googleRequests, 1);
+      } finally {
+        globalThis.fetch = previousFetch;
+        for (const [key, value] of Object.entries(savedAiEnv)) {
+          if (value === undefined) delete process.env[key];
+          else process.env[key] = value;
+        }
+      }
     } finally {
       if (server) await new Promise((r) => server.close(r));
       await mongoose.disconnect();

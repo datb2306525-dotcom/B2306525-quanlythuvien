@@ -42,6 +42,30 @@ export function useLibrary() {
     question = ref(''),
     chat = ref([]),
     chatBusy = ref(false);
+  const chatConfig = ref({ provider: 'catalog', configured: false, requiresConsent: false });
+  const externalAIConsent = ref(false);
+  const chatConfigLoaded = ref(false);
+  watch(
+    externalAIConsent,
+    () => {
+      // Each consent period starts fresh; earlier local messages are not exported later.
+      for (const message of chat.value) message.shareWithGoogle = false;
+    },
+    { flush: 'sync' },
+  );
+
+  async function loadChatConfig() {
+    try {
+      chatConfig.value = await api('/ai/config');
+      chatConfigLoaded.value = true;
+    } catch {
+      // No consent flag is sent when configuration cannot be checked.
+      chatConfigLoaded.value = false;
+    }
+  }
+  watch(chatOpen, (open) => {
+    if (open) loadChatConfig();
+  });
   const loginForm = ref({ email: '', password: '' }),
     registerForm = ref({
       HoLot: '',
@@ -484,17 +508,47 @@ export function useLibrary() {
     }
   }
   async function ask(text) {
-    const q = text || question.value;
+    const q = (text || question.value).trim();
     if (!q.trim() || chatBusy.value) return;
+    if (q.length > 1000) return;
+    chatBusy.value = true;
+    if (!chatConfigLoaded.value) await loadChatConfig();
+    const shareWithGoogle =
+      chatConfigLoaded.value &&
+      chatConfig.value.provider === 'gemini' &&
+      externalAIConsent.value === true;
+    const history = chat.value
+      .filter((message) => !message.failed && (!shareWithGoogle || message.shareWithGoogle))
+      .slice(-6)
+      .map((message) => ({
+        role: message.role,
+        text: message.text.slice(0, 1000),
+        bookIds: (message.results || []).map((result) => result.bookId),
+      }));
     chatOpen.value = true;
     question.value = '';
-    chat.value.push({ role: 'user', text: q });
+    chat.value.push({ role: 'user', text: q, shareWithGoogle });
     chatBusy.value = true;
     try {
-      const r = await api('/ai/search', { method: 'POST', body: { question: q } });
-      chat.value.push({ role: 'assistant', text: r.answer, results: r.results });
+      const r = await api('/ai/search', {
+        method: 'POST',
+        body: { question: q, history, externalAIConsent: shareWithGoogle },
+      });
+      chat.value.push({
+        role: 'assistant',
+        text: r.answer,
+        results: r.results,
+        external: r.external || [],
+        mode: r.mode,
+        aiUnavailable: r.aiUnavailable,
+        aiError: r.aiError,
+        consentRequired: r.consentRequired,
+        shareWithGoogle,
+        stockCheckedAt: r.stockCheckedAt,
+      });
     } catch (e) {
-      chat.value.push({ role: 'assistant', text: e.message });
+      chat.value.push({ role: 'assistant', text: e.message, failed: true });
+      question.value = q;
     } finally {
       chatBusy.value = false;
     }
@@ -574,6 +628,8 @@ export function useLibrary() {
     question,
     chat,
     chatBusy,
+    chatConfig,
+    externalAIConsent,
     loginForm,
     registerForm,
     bookForm,

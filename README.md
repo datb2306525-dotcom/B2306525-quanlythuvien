@@ -1,5 +1,26 @@
 # Athena — Website quản lý thư viện
 
+## Gemini trên Render
+
+Athena đã hỗ trợ Google Gemini, có lựa chọn đồng ý trước khi gửi câu hỏi và ngữ cảnh tới Google. Làm theo [hướng dẫn Gemini trên Render](docs/GEMINI_RENDER.md): cập nhật source, đặt `AI_PROVIDER=gemini`, `GEMINI_API_KEY` và `GEMINI_MODEL=gemini-2.5-flash` trong Environment của backend rồi deploy lại. Không đặt key ở frontend hoặc commit `.env`.
+
+## Athena: trò chuyện về sách
+
+Khung chat hiện hỗ trợ giới thiệu nội dung từ mô tả sách, gợi ý theo hoàn cảnh và nhu cầu đọc, câu hỏi nối tiếp dựa trên tối đa 8 tin nhắn gần nhất, hướng dẫn đăng ký lịch mượn → duyệt → mã phiếu → nhận sách → trả sách. Câu hỏi ngoài phạm vi được hướng về sách. Có nút bắt đầu hội thoại mới, tự cuộn, trạng thái chờ và gửi lại khi lỗi. Hội thoại chỉ giữ trong bộ nhớ trang, không lưu vào MongoDB hoặc localStorage.
+
+Khi không có mô hình, Athena dùng quy tắc hội thoại, mô tả trong danh mục và hướng dẫn nghiệp vụ; không thể tự tóm tắt toàn văn chưa được cung cấp. Khi không tìm thấy sách, Athena cung cấp liên kết tìm kiếm Google Books / WorldCat và nói rõ chưa kiểm chứng kết quả. Tựa sách ngoài danh mục do mô hình gợi ý được đánh dấu chưa xác minh, không khẳng định nơi bán hay nơi mượn.
+
+Để bật hội thoại AI tự nhiên, chạy Ollama **trên cùng máy chủ Node.js**, tải model rồi cấu hình `server/.env`:
+
+```dotenv
+OLLAMA_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:7b
+```
+
+Khởi động lại backend sau khi đổi cấu hình. Khi chọn Ollama, luồng hội thoại chỉ cho phép loopback và không theo redirect. Khi triển khai Node.js trên hosting, `localhost` là máy hosting, không phải máy cá nhân; cần có Ollama trên chính máy chủ đó. Trên Render có thể chọn Gemini thay thế, với lựa chọn đồng ý của người dùng trước khi gửi dữ liệu tới Google. Nếu chưa có AI hoặc người dùng không đồng ý dùng Google, chức năng dựa trên danh mục vẫn hoạt động.
+
+`POST /api/ai/search` nhận `{ question, history: [{ role, text, bookIds }], externalAIConsent }`. Với Gemini, `externalAIConsent` bắt buộc là boolean `true` mới được gọi Google. Server chỉ chấp nhận vai trò user/assistant, giới hạn số tin và độ dài, bỏ system message từ client. Mô hình chọn tối đa 5 ID thuộc danh mục; máy chủ đối chiếu lại MongoDB để dựng thẻ sách và tồn kho. Không sử dụng lời khẳng định số lượng của mô hình. Timeout, ID bịa hoặc phản hồi sai định dạng chuyển sang trả lời từ danh mục. API chat có bộ giới hạn tần suất riêng với API đăng nhập. `GET /api/ai/config` công khai trạng thái nhà cung cấp/cấu hình, không trả key.
+
 Ứng dụng tiếng Việt theo kiến trúc MVC: Node.js / Express, Vue 3, Bootstrap 5, MongoDB / Mongoose. Giao diện xanh navy – trắng – vàng, responsive; cổng độc giả và quản trị riêng.
 
 ## Chạy dự án trên Windows
@@ -112,7 +133,7 @@ OLLAMA_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen2.5:7b
 ```
 
-Model chỉ chọn tối đa 5 ID trong tối đa 200 sách đầu tiên của danh mục. Máy chủ kiểm tra tất cả ID, loại trùng và đối chiếu CSDL lần nữa để lấy tên, mô tả và số bản mới nhất. Không dùng tên sách, số lượng hoặc lời giải thích tự do do model sinh. Mỗi kết quả chứa `bookId`, thông tin sách, lý do dựa trên mô tả/thể loại và cờ `available`. AI lỗi, timeout hoặc trả ID không hợp lệ thì quay về tìm kiếm danh mục. Tồn có thể thay đổi sau câu trả lời, do đó thao tác duyệt luôn kiểm tra tồn lại trong transaction. Với thư viện lớn hơn, cần nâng cấp truy hồi trước khi gửi candidate cho model.
+Model nhận tối đa 30 sách với Gemini hoặc 100 sách với Ollama, ưu tiên sách được nhắc trước đó và sách xếp hạng theo nhu cầu hiện tại, rồi sinh câu trả lời hội thoại cùng tối đa 5 ID. Máy chủ kiểm tra ID, loại trùng và đối chiếu CSDL lần nữa để lấy tên, mô tả và số bản mới nhất cho thẻ sách. Lời mô tả trong thẻ và tồn kho lấy từ MongoDB; lời trò chuyện do model sinh cần được đối chiếu khi sử dụng. Các tựa sách ngoài danh mục được phân biệt rõ, chưa xác minh và chỉ liên kết đến trang tìm kiếm do máy chủ tạo. AI lỗi, timeout, trả ID không hợp lệ hoặc khẳng định tồn kho trong văn bản thì quay về trả lời dựa trên danh mục. Tồn có thể thay đổi sau câu trả lời, do đó thao tác duyệt luôn kiểm tra tồn lại trong transaction. Với thư viện lớn hơn, cần nâng cấp truy hồi và chỉ mục tìm kiếm trước khi gửi ứng viên cho model.
 
 Ví dụ: “Tôi muốn học Python từ con số 0”, “Có sách về trí tuệ nhân tạo phù hợp sinh viên năm 2 không?”, “Tìm sách bảo mật mạng có thực hành”, “Gợi ý sách quản trị kinh doanh cho người mới”.
 

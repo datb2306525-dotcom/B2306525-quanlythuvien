@@ -29,7 +29,15 @@ router.post('/books', staff, wrap(books.save));
 router.put('/books/:id', staff, wrap(books.save));
 router.get('/publishers', wrap(books.publishers));
 router.post('/publishers', staff, wrap(books.publisherSave));
-router.post('/ai/search', limit, wrap(books.ask));
+const chatLimit = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 40,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Bạn nhắn hơi nhanh. Vui lòng chờ một chút rồi tiếp tục với Athena.' },
+});
+router.get('/ai/config', books.chatConfiguration);
+router.post('/ai/search', chatLimit, wrap(books.ask));
 router.get('/recommendations', auth(['Reader']), wrap(books.recommendations));
 router.get('/loans', auth(), wrap(loans.list));
 router.post('/loans', auth(['Reader']), wrap(loans.request));

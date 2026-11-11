@@ -14,6 +14,8 @@ await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/Qua
 });
 await initializeModels();
 const app = express();
+// Render terminates HTTPS at its reverse proxy. Use that hop for per-client rate limits.
+if (process.env.RENDER === 'true') app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use('/api/books', express.json({ limit: '2mb' }));

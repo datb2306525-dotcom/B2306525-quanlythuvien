@@ -1,7 +1,8 @@
 import { genresOf, genreLabel, matchesGenre } from '../../../shared/genres.js';
 import { Sach, NhaXuatBan, TheoDoiMuonSach } from '../models/index.js';
 import { normalize } from '../services/search.js';
-import { searchCatalog } from '../services/ai.js';
+import { converse } from '../services/athena.js';
+import { aiConfiguration } from '../services/gemini.js';
 export async function list(req, res) {
   const books = await Sach.find().populate('MaNXB').sort({ createdAt: -1 }).lean();
   const q = normalize(req.query.q);
@@ -83,13 +84,21 @@ export async function publisherSave(req, res) {
   const { MaNXB, TenNXB, DiaChi } = req.body;
   res.status(201).json(await NhaXuatBan.create({ MaNXB, TenNXB, DiaChi }));
 }
+export function chatConfiguration(_req, res) {
+  res.set('Cache-Control', 'no-store').json(aiConfiguration());
+}
+
 export async function ask(req, res) {
   const question = String(req.body.question || '').trim();
   if (!question || question.length > 1000)
     return res.status(400).json({ message: 'Hãy nhập câu hỏi từ 1 đến 1.000 ký tự.' });
   const books = await Sach.find().populate('MaNXB').lean();
-  const { matches, mode } = await searchCatalog(books, question);
-  const ids = matches.map((m) => m.book._id);
+  if (req.body.history !== undefined && !Array.isArray(req.body.history))
+    return res.status(400).json({ message: 'Lịch sử hội thoại không hợp lệ.' });
+  const reply = await converse(books, question, req.body.history, {
+    externalAIConsent: req.body.externalAIConsent === true,
+  });
+  const ids = reply.bookIds;
   const fresh = await Sach.find({ _id: { $in: ids } })
     .populate('MaNXB')
     .lean();
@@ -100,14 +109,17 @@ export async function ask(req, res) {
     .map((book) => ({
       bookId: book._id,
       book,
-      reason: `Chủ đề: ${genresOf(book.TheLoai).join(' · ')}. ${book.MoTa}`,
+      reason: `Chủ đề: ${genresOf(book.TheLoai).join(' · ')}. ${book.MoTa || 'Thư viện chưa bổ sung mô tả nội dung.'}`,
       available: book.SoQuyen > 0,
     }));
   res.json({
-    mode,
-    answer: results.length
-      ? 'Tôi tìm thấy các sách phù hợp trong danh mục thư viện. Tình trạng dưới đây được kiểm tra tại thời điểm tìm kiếm; yêu cầu mượn cần được thủ thư duyệt.'
-      : 'Chưa tìm thấy sách phù hợp trong dữ liệu thư viện. Bạn có thể thử chủ đề hoặc từ khóa cụ thể hơn.',
+    mode: reply.mode,
+    answer: reply.answer,
+    external: reply.external,
+    aiUnavailable: Boolean(reply.aiUnavailable),
+    aiError: reply.aiError,
+    consentRequired: Boolean(reply.consentRequired),
+    stockCheckedAt: new Date().toISOString(),
     results,
   });
 }
