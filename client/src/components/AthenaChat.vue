@@ -5,6 +5,21 @@ const { chatOpen, question, chat, chatBusy, chatConfig, externalAIConsent, detai
   useLibraryContext();
 const chatBody = ref(null);
 const chatInput = ref(null);
+function aiFailureMessage(reason) {
+  const messages = {
+    quota: 'AI đã đạt giới hạn lượt dùng. Bạn có thể thử lại sau.',
+    configuration: 'Dịch vụ AI chưa được cấu hình đầy đủ.',
+    invalid_key: 'Dịch vụ AI gặp lỗi xác thực. Quản trị viên cần kiểm tra API key.',
+    permission: 'Google chưa cấp quyền truy cập AI cho cấu hình hiện tại.',
+    model: 'Model AI hiện không khả dụng hoặc chưa được cấp quyền truy cập.',
+    region: 'Dịch vụ AI chưa hỗ trợ khu vực hoặc điều kiện sử dụng hiện tại.',
+    precondition: 'Tài khoản hoặc project chưa đáp ứng điều kiện sử dụng của Google.',
+    request: 'Yêu cầu tới AI chưa tương thích với cấu hình model hiện tại.',
+  };
+  return (
+    (messages[reason] || 'AI hiện chưa phản hồi.') + ' Athena đang hỗ trợ bằng dữ liệu thư viện.'
+  );
+}
 
 watch(
   () => [chat.value.length, chatBusy.value, chatOpen.value],
@@ -109,13 +124,7 @@ function newConversation() {
         <small
           v-if="m.aiUnavailable"
           class="chat-mode-note"
-          >{{
-            m.aiError === 'quota'
-              ? 'AI đã đạt giới hạn lượt dùng. Athena vẫn hỗ trợ bằng dữ liệu thư viện; bạn có thể thử lại sau.'
-              : m.aiError === 'configuration'
-                ? 'Dịch vụ AI chưa sẵn sàng. Athena đang hỗ trợ bằng dữ liệu thư viện.'
-                : 'AI hiện chưa phản hồi. Athena đang hỗ trợ bằng dữ liệu và hướng dẫn thư viện.'
-          }}</small
+          >{{ aiFailureMessage(m.aiError) }}</small
         >
         <small
           v-if="m.consentRequired"

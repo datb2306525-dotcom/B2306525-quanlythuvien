@@ -36,9 +36,51 @@ const responseSchema = {
   required: ['answer', 'bookIds', 'outside'],
 };
 
+export function geminiModel() {
+  const model = (process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash').replace(/^models\//, '');
+  return /^gemini-[a-zA-Z0-9._-]+$/.test(model) ? model : null;
+}
+
+export function geminiFailure(httpStatus, payload) {
+  const error = payload?.error;
+  const reasons = Array.isArray(error?.details) ? error.details.map((item) => item?.reason) : [];
+  const detail = reasons.find((reason) =>
+    [
+      'API_KEY_INVALID',
+      'API_KEY_EXPIRED',
+      'API_KEY_SERVICE_BLOCKED',
+      'API_KEY_HTTP_REFERRER_BLOCKED',
+      'API_KEY_IP_ADDRESS_BLOCKED',
+      'SERVICE_DISABLED',
+    ].includes(reason),
+  );
+  const message = typeof error?.message === 'string' ? error.message : '';
+  const reason =
+    httpStatus === 429
+      ? 'quota'
+      : httpStatus === 401 || ['API_KEY_INVALID', 'API_KEY_EXPIRED'].includes(detail)
+        ? 'invalid_key'
+        : httpStatus === 403
+          ? 'permission'
+          : httpStatus === 404
+            ? 'model'
+            : httpStatus === 400 &&
+                /not (?:available|supported).*?(?:country|region)|country.*not supported/i.test(
+                  message,
+                )
+              ? 'region'
+              : httpStatus === 400 && error?.status === 'FAILED_PRECONDITION'
+                ? 'precondition'
+                : httpStatus === 400
+                  ? 'request'
+                  : 'unavailable';
+  // Never expose the provider's message, URLs, metadata, key or user input.
+  return { ok: false, reason, httpStatus, ...(detail ? { detail } : {}) };
+}
+
 export async function generateGemini(messages) {
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
-  if (!/^[a-zA-Z0-9._-]+$/.test(model)) return { ok: false, reason: 'configuration' };
+  const model = geminiModel();
+  if (!model) return { ok: false, reason: 'configuration' };
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return { ok: false, reason: 'configuration' };
   try {
@@ -60,21 +102,18 @@ export async function generateGemini(messages) {
             maxOutputTokens: 2048,
             responseMimeType: 'application/json',
             responseSchema,
-            thinkingConfig: { thinkingBudget: 0 },
+            ...(/^gemini-2\.5-flash(?:-lite)?$/.test(model)
+              ? { thinkingConfig: { thinkingBudget: 0 } }
+              : {}),
           },
         }),
       },
     );
     if (!response.ok) {
-      return {
-        ok: false,
-        reason:
-          response.status === 429
-            ? 'quota'
-            : [401, 403, 404, 400].includes(response.status)
-              ? 'configuration'
-              : 'unavailable',
-      };
+      const payload = await response.json().catch(() => null);
+      const failure = geminiFailure(response.status, payload);
+      console.warn('[Athena Gemini]', JSON.stringify(failure));
+      return failure;
     }
     const data = await response.json();
     const candidate = data.candidates?.[0];

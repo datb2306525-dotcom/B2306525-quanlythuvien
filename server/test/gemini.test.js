@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aiConfiguration } from '../src/services/gemini.js';
+import { aiConfiguration, geminiFailure } from '../src/services/gemini.js';
 import { converse } from '../src/services/athena.js';
 
 const books = [
@@ -129,8 +129,8 @@ test('Gemini rejects invented IDs using the same catalog validation as Ollama', 
 test('Gemini quota and credential errors fall back with safe status, no provider errors', async () => {
   for (const [status, reason] of [
     [429, 'quota'],
-    [403, 'configuration'],
-    [404, 'configuration'],
+    [403, 'permission'],
+    [404, 'model'],
     [503, 'unavailable'],
   ]) {
     await withGemini(
@@ -150,6 +150,45 @@ test('Gemini quota and credential errors fall back with safe status, no provider
       },
     );
   }
+});
+
+test('Google errors are classified without exposing raw errors, metadata or keys', () => {
+  const cases = [
+    [400, { status: 'INVALID_ARGUMENT', details: [{ reason: 'API_KEY_INVALID' }] }, 'invalid_key'],
+    [
+      403,
+      { status: 'PERMISSION_DENIED', details: [{ reason: 'API_KEY_SERVICE_BLOCKED' }] },
+      'permission',
+    ],
+    [404, { status: 'NOT_FOUND' }, 'model'],
+    [400, { status: 'FAILED_PRECONDITION' }, 'precondition'],
+    [400, { status: 'INVALID_ARGUMENT' }, 'request'],
+  ];
+  for (const [status, error, reason] of cases) {
+    const result = geminiFailure(status, {
+      error: {
+        ...error,
+        message: 'secret private story https://example.com?key=test-secret',
+        metadata: { key: 'test-secret' },
+      },
+    });
+    assert.equal(result.reason, reason);
+    assert.ok(!JSON.stringify(result).includes('test-secret'));
+    assert.ok(!JSON.stringify(result).includes('private story'));
+  }
+});
+
+test('newer configured models omit the legacy thinkingBudget and accept models/ prefix', async () => {
+  await withGemini(
+    () => modelResponse(valid),
+    async (requests) => {
+      process.env.GEMINI_MODEL = 'models/gemini-3.5-flash-lite';
+      const result = await converse(books, 'Python', [], { externalAIConsent: true });
+      assert.equal(result.mode, 'gemini');
+      assert.ok(requests[0].url.endsWith('/gemini-3.5-flash-lite:generateContent'));
+      assert.equal(JSON.parse(requests[0].body).generationConfig.thinkingConfig, undefined);
+    },
+  );
 });
 
 test('missing key and invalid model do not make any external request', async () => {
